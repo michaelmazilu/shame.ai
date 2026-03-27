@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ShotTaker - Tinder for Instagram",
+  "version": "1.0.0",
+  "description": "Swipe through Instagram profiles and shoot your shot",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.instagram.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["interceptor.js", "instagram-api.js", "icons/*"],
+      "matches": ["https://www.instagram.com/*"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

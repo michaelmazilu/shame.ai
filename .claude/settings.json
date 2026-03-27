@@ -2,7 +2,38 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(rsvg-convert -w 48 -h 48 icons/icon.svg -o icons/icon48.png)",
+      "Bash(rsvg-convert -w 128 -h 128 icons/icon.svg -o icons/icon128.png)",
+      "Read(//Users/owner/Downloads/startup_ideas/**)",
+      "Bash(python test_profile_data.py)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(node test/test-api.js suggested)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(node test/test-api.js profile instagram)",
+      "Bash(jq -e '.hooks.SessionStart[] | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' .claude/settings.json)",
+      "Bash(node test/test-followers.js)",
+      "Bash(node test/test-show-many.js)",
+      "Bash(node test/test-api.js follow-rt 63386596680)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$(echo '== PROJECT CONTEXT =='; echo ''; echo '--- Git Branch ---'; git branch --show-current 2>/dev/null; echo ''; echo '--- Git Status ---'; git status --short 2>/dev/null; echo ''; echo '--- Recent Commits (last 5) ---'; git log --oneline -5 2>/dev/null; echo ''; echo '--- Recently Modified Files ---'; git diff --name-only HEAD~3 2>/dev/null | head -20)\"'\"}}'",
+            "timeout": 10,
+            "statusMessage": "Gathering project context..."
+          }
+        ]
+      }
     ]
   }
 }

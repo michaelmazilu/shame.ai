@@ -1,0 +1,493 @@
+/* ShotTaker - Instagram-native styling */
+
+/* ── Nav Button ─────────────────────────────────────────────────────── */
+.st-nav-btn-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 12px;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.st-nav-btn-wrapper:hover {
+  transform: scale(1.1);
+}
+
+.st-nav-btn-wrapper:active {
+  transform: scale(0.95);
+}
+
+.st-nav-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--ig-primary-text, #262626);
+}
+
+.st-nav-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── Slide-in Panel ─────────────────────────────────────────────────── */
+.st-panel {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: #000;
+  border-left: 1px solid #262626;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  color: #f5f5f5;
+  box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.st-panel-open {
+  right: 0;
+}
+
+.st-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #262626;
+  background: #000;
+  flex-shrink: 0;
+}
+
+.st-panel-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-fire {
+  font-size: 22px;
+}
+
+.st-close-btn {
+  background: none;
+  border: none;
+  color: #a8a8a8;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.st-close-btn:hover {
+  color: #fff;
+}
+
+.st-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ── Swipe Card ─────────────────────────────────────────────────────── */
+.st-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1a1a1a;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+  cursor: grab;
+  user-select: none;
+  position: relative;
+}
+
+.st-card:active {
+  cursor: grabbing;
+}
+
+.st-card-image {
+  width: 100%;
+  height: 360px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.st-card-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+.st-card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  z-index: 2;
+}
+
+.st-card-info h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  color: #fff;
+}
+
+.st-card-username {
+  font-size: 14px;
+  color: #a8a8a8;
+  margin: 0 0 6px 0;
+}
+
+.st-card-bio {
+  font-size: 13px;
+  color: #dbdbdb;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.st-verified {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  background: #0095f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  z-index: 3;
+}
+
+/* ── Like / Pass badges (shown during drag) ─────────────────────────── */
+.st-card-badge {
+  position: absolute;
+  top: 24px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.1s;
+  pointer-events: none;
+}
+
+.st-badge-like {
+  left: 20px;
+  color: #4ade80;
+  border: 3px solid #4ade80;
+  transform: rotate(-15deg);
+}
+
+.st-badge-pass {
+  right: 20px;
+  color: #f87171;
+  border: 3px solid #f87171;
+  transform: rotate(15deg);
+}
+
+/* ── Stats row ──────────────────────────────────────────────────────── */
+.st-card-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 14px 16px;
+  border-bottom: 1px solid #262626;
+}
+
+.st-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.st-stat strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.st-stat span {
+  font-size: 11px;
+  color: #8e8e8e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Mutual friends & external link ──────────────────────────────────── */
+.st-mutual {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #a8a8a8;
+  border-bottom: 1px solid #262626;
+}
+
+.st-external-link {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid #262626;
+}
+
+.st-external-link a {
+  color: #0095f6;
+  text-decoration: none;
+}
+
+.st-external-link a:hover {
+  text-decoration: underline;
+}
+
+/* ── Recent posts thumbnails ────────────────────────────────────────── */
+.st-recent-posts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+}
+
+.st-post-thumb {
+  aspect-ratio: 1;
+  background-size: cover;
+  background-position: center;
+}
+
+/* ── Action buttons ─────────────────────────────────────────────────── */
+.st-card-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px;
+}
+
+.st-action-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.st-pass {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.st-pass:hover {
+  background: #f87171;
+  color: #000;
+  transform: scale(1.1);
+}
+
+.st-like {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.st-like:hover {
+  background: #4ade80;
+  color: #000;
+  transform: scale(1.1);
+}
+
+.st-open {
+  border-color: #0095f6;
+  color: #0095f6;
+  font-size: 18px;
+}
+
+.st-open:hover {
+  background: #0095f6;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* ── Swipe animations ───────────────────────────────────────────────── */
+.st-swipe-right {
+  animation: swipeRight 0.3s forwards;
+}
+
+.st-swipe-left {
+  animation: swipeLeft 0.3s forwards;
+}
+
+@keyframes swipeRight {
+  to {
+    transform: translateX(150%) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipeLeft {
+  to {
+    transform: translateX(-150%) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
+/* ── Loading state ──────────────────────────────────────────────────── */
+.st-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+}
+
+.st-loading p {
+  color: #8e8e8e;
+  font-size: 14px;
+}
+
+.st-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #262626;
+  border-top-color: #0095f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.st-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+}
+
+.st-empty p {
+  color: #8e8e8e;
+  font-size: 14px;
+}
+
+/* ── DM Composer ────────────────────────────────────────────────────── */
+.st-dm-composer {
+  background: #1a1a1a;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.st-dm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #262626;
+}
+
+.st-dm-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.st-dm-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+}
+
+.st-dm-username {
+  font-size: 13px;
+  color: #8e8e8e;
+}
+
+.st-dm-input {
+  width: 100%;
+  border: none;
+  background: #000;
+  color: #f5f5f5;
+  padding: 14px 16px;
+  font-size: 14px;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.st-dm-input::placeholder {
+  color: #555;
+}
+
+.st-dm-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  justify-content: flex-end;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.st-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.st-btn-send {
+  background: #0095f6;
+  color: #fff;
+}
+
+.st-btn-send:hover {
+  background: #1aa1f7;
+}
+
+.st-btn-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.st-btn-skip {
+  background: transparent;
+  color: #8e8e8e;
+  border: 1px solid #363636;
+}
+
+.st-btn-skip:hover {
+  border-color: #555;
+  color: #dbdbdb;
+}

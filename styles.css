@@ -1,0 +1,324 @@
+/* styles.css — ShotTaker UI styles, matching Instagram's design language */
+
+/* Container — floating panel */
+#shottaker-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 340px;
+  max-height: 580px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 99999;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Header */
+#st-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  color: white;
+  cursor: default;
+  user-select: none;
+}
+
+#st-logo {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+#st-minimize {
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: white;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+#st-minimize:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Card area */
+#st-card-area {
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+}
+
+#st-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8e8e8e;
+  font-size: 14px;
+  gap: 12px;
+}
+
+#st-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #dbdbdb;
+  border-top: 3px solid #833ab4;
+  border-radius: 50%;
+  animation: st-spin 0.8s linear infinite;
+}
+
+@keyframes st-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Swipe card */
+.st-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  user-select: none;
+  background: #fff;
+}
+
+.st-card:active {
+  cursor: grabbing;
+}
+
+.st-card-image {
+  width: 100%;
+  height: 220px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* Swipe labels */
+.st-swipe-label {
+  position: absolute;
+  top: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 22px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  pointer-events: none;
+}
+
+.st-label-like {
+  right: 16px;
+  background: rgba(0, 200, 83, 0.9);
+  color: white;
+  transform: rotate(12deg);
+}
+
+.st-label-pass {
+  left: 16px;
+  background: rgba(255, 59, 48, 0.9);
+  color: white;
+  transform: rotate(-12deg);
+}
+
+/* Card info */
+.st-card-info {
+  padding: 12px 16px;
+}
+
+.st-card-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #262626;
+  line-height: 1.3;
+}
+
+.st-card-username {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #8e8e8e;
+}
+
+.st-card-bio {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #262626;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.st-card-stats {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #8e8e8e;
+}
+
+.st-mutual {
+  color: #0095f6;
+  font-weight: 500;
+}
+
+/* Recent posts thumbnails */
+.st-recent-posts {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.st-post-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* Action buttons */
+#st-actions {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid #efefef;
+}
+
+#st-pass,
+#st-shoot {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+#st-pass {
+  background: #fff;
+  border: 2px solid #ff3b30;
+  color: #ff3b30;
+}
+
+#st-pass:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+}
+
+#st-shoot {
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  color: white;
+  border: none;
+}
+
+#st-shoot:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(131, 58, 180, 0.4);
+}
+
+/* Status bar */
+#st-status {
+  padding: 6px 16px 10px;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  min-height: 14px;
+}
+
+.st-status-success {
+  color: #00c853;
+}
+.st-status-error {
+  color: #ff3b30;
+}
+.st-status-info {
+  color: #8e8e8e;
+}
+
+/* Toggle button — injected into page */
+#st-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 370px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 99998;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+  user-select: none;
+}
+
+#st-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  #shottaker-container {
+    background: #1a1a1a;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .st-card {
+    background: #1a1a1a;
+  }
+
+  .st-card-name {
+    color: #fafafa;
+  }
+
+  .st-card-bio {
+    color: #dbdbdb;
+  }
+
+  #st-actions {
+    border-top-color: #363636;
+  }
+
+  #st-pass {
+    background: #1a1a1a;
+  }
+
+  #st-empty-state {
+    color: #a8a8a8;
+  }
+}

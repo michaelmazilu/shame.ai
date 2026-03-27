@@ -1,0 +1,323 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 320px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        background: #fafafa;
+        color: #262626;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
+        color: white;
+        padding: 16px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .header p {
+        font-size: 12px;
+        opacity: 0.85;
+        margin-top: 4px;
+      }
+
+      .section {
+        padding: 14px 16px;
+        border-bottom: 1px solid #efefef;
+      }
+
+      .section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #8e8e8e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+
+      /* Toggle switch */
+      .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+      }
+
+      .toggle-label {
+        font-size: 14px;
+      }
+
+      .toggle {
+        position: relative;
+        width: 44px;
+        height: 24px;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #dbdbdb;
+        border-radius: 24px;
+        transition: 0.3s;
+      }
+
+      .toggle .slider::before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.3s;
+      }
+
+      .toggle input:checked + .slider {
+        background: #833ab4;
+      }
+
+      .toggle input:checked + .slider::before {
+        transform: translateX(20px);
+      }
+
+      /* DM template */
+      .dm-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #dbdbdb;
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 60px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .dm-input:focus {
+        border-color: #833ab4;
+      }
+
+      /* Rate limit */
+      .rate-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .rate-input {
+        width: 60px;
+        padding: 6px 8px;
+        border: 1px solid #dbdbdb;
+        border-radius: 6px;
+        font-size: 14px;
+        text-align: center;
+        outline: none;
+      }
+
+      .rate-input:focus {
+        border-color: #833ab4;
+      }
+
+      .rate-label {
+        font-size: 13px;
+        color: #8e8e8e;
+      }
+
+      /* Stats */
+      .stats {
+        display: flex;
+        gap: 12px;
+      }
+
+      .stat {
+        flex: 1;
+        text-align: center;
+        padding: 10px 0;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #efefef;
+      }
+
+      .stat-number {
+        font-size: 20px;
+        font-weight: 700;
+        color: #833ab4;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #8e8e8e;
+        margin-top: 2px;
+      }
+
+      /* History */
+      .history-list {
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      .history-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #f5f5f5;
+      }
+
+      .history-item:last-child {
+        border-bottom: none;
+      }
+
+      .history-username {
+        font-weight: 500;
+        color: #262626;
+      }
+
+      .history-time {
+        color: #8e8e8e;
+        font-size: 11px;
+      }
+
+      /* Buttons */
+      .btn-reset {
+        width: 100%;
+        padding: 10px;
+        background: none;
+        border: 1px solid #ff3b30;
+        color: #ff3b30;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .btn-reset:hover {
+        background: #ff3b30;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🎯 ShotTaker</h1>
+      <p>Shoot your shot on Instagram</p>
+    </div>
+
+    <div class="section">
+      <div class="toggle-row">
+        <span class="toggle-label">Enable ShotTaker</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-enabled" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Stats</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number" id="stat-shots">0</div>
+          <div class="stat-label">Shots Sent</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number" id="stat-seen">0</div>
+          <div class="stat-label">Profiles Seen</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">DM Template</div>
+      <textarea
+        class="dm-input"
+        id="dm-template"
+        placeholder="Your opening message..."
+      ></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Rate Limit</div>
+      <div class="rate-row">
+        <input
+          type="number"
+          class="rate-input"
+          id="max-dms"
+          min="1"
+          max="50"
+          value="10"
+        />
+        <span class="rate-label">max DMs per hour</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Profile Sources</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Suggested Users</span>
+        <label class="toggle">
+          <input type="checkbox" id="source-suggested" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Explore Page</span>
+        <label class="toggle">
+          <input type="checkbox" id="source-explore" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Friends of Friends</span>
+        <label class="toggle">
+          <input type="checkbox" id="source-fof" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recent Shots</div>
+      <div class="history-list" id="history-list">
+        <div class="history-item" style="color: #8e8e8e; text-align: center">
+          No shots fired yet
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <button class="btn-reset" id="btn-reset">Reset All Data</button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
