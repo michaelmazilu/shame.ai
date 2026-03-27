@@ -22,7 +22,12 @@
       "Bash(node test/test-api.js follow-rt 63386596680)",
       "Bash(python3 test_profile_data.py)",
       "Bash(pip3 install:*)",
-      "Read(//Users/owner/.claude/**)"
+      "Read(//Users/owner/.claude/**)",
+      "Bash(/Users/owner/Downloads/startup_ideas/shottaker/.venv/bin/pip install:*)",
+      "Bash(.venv/bin/python3 -c \"from test.config import ACCOUNTS, GRAPHQL_TOKENS, headers; print\\(''OK -'', ACCOUNTS[1][''name'']\\)\")",
+      "Bash(.venv/bin/python3 test/simulate.py)",
+      "Bash(.venv/bin/python3 -c \":*)",
+      "Bash(python3 test/benchmark_rates.py)"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude"

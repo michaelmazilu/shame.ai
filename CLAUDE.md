@@ -14,7 +14,26 @@ No build step — plain JavaScript, CSS, and HTML. Load as an unpacked Chrome ex
 2. Click "Load unpacked" → select the repo root (or `extension/` for the alternate version)
 3. Navigate to instagram.com to see the overlay
 
-There are no tests, linter, or package manager configured.
+No tests, linter, or package manager for the extension itself.
+
+## Backend Testing (test/)
+
+Python scripts for testing Instagram API calls outside the browser. Requires `python-dotenv`.
+
+```bash
+# Setup
+cp .env.example .env   # then fill in your IG session cookies from DevTools
+pip install python-dotenv
+
+# Run the interactive pipeline simulation
+python3 test/simulate.py
+
+# Run individual API tests
+python3 test/test_api.py
+python3 test/test_followers.py
+```
+
+Credentials live in `.env` (gitignored). `test/config.py` reads them via `dotenv` and exports `ACCOUNTS`, `GRAPHQL_TOKENS`, `SHARED_HEADERS`. Other test files import from `config.py`.
 
 ## Architecture
 

@@ -13,13 +13,18 @@ Usage: python3 test/simulate.py
 
 import json
 import math
+import os
 import random
+import sys
 import time
 import urllib.parse
 import urllib.request
 import ssl
 
-from config import ACCOUNTS, GRAPHQL_TOKENS
+# Ensure test/ directory is on the path so config.py can be imported
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from config import ACCOUNTS, GRAPHQL_TOKENS, headers as config_headers
 
 ACTIVE = ACCOUNTS[1]
 
@@ -50,18 +55,7 @@ def rate_limited_request(url, method="GET", data=None, extra_headers=None):
         time.sleep(wait)
     last_call_time = time.time()
 
-    headers = {
-        "x-ig-app-id": "936619743392459",
-        "x-requested-with": "XMLHttpRequest",
-        "x-csrftoken": ACTIVE["csrftoken"],
-        "cookie": ACTIVE["cookies"],
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "referer": "https://www.instagram.com/",
-        "origin": "https://www.instagram.com",
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-    }
+    headers = config_headers()
     if extra_headers:
         headers.update(extra_headers)
 
