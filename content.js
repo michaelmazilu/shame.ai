@@ -253,7 +253,16 @@
     for (const p of profiles.slice(0, limit)) {
       try {
         const full = await InstagramAPI.getProfileInfo(p.username);
-        enriched.push(full || p);
+        if (full) {
+          try {
+            full.recentPosts = await InstagramAPI.getUserPosts(full.id, 6);
+          } catch (e) {
+            full.recentPosts = [];
+          }
+          enriched.push(full);
+        } else {
+          enriched.push(p);
+        }
       } catch (e) {
         enriched.push(p);
       }

@@ -21,7 +21,11 @@
       "Bash(node test/test-show-many.js)",
       "Bash(node test/test-api.js follow-rt 63386596680)",
       "Bash(python3 test_profile_data.py)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Read(//Users/owner/.claude/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/owner/.claude"
     ]
   },
   "hooks": {

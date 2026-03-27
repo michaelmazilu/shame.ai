@@ -1,5 +1,3 @@
-test/
-test_profile_data.py
+.env
 .venv/
 .claude/
-.env

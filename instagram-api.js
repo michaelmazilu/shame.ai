@@ -58,13 +58,22 @@ const InstagramAPI = (() => {
       profilePic: user.profile_pic_url_hd || user.profile_pic_url,
       followers: user.edge_followed_by?.count || 0,
       following: user.edge_follow?.count || 0,
+      postCount: user.edge_owner_to_timeline_media?.count || 0,
       isPrivate: user.is_private,
-      recentPosts: (user.edge_owner_to_timeline_media?.edges || [])
-        .slice(0, 3)
-        .map((e) => ({
-          url: e.node?.display_url,
-          thumbnail: e.node?.thumbnail_src,
-        })),
+      isVerified: user.is_verified || false,
+      isBusiness: user.is_business_account || false,
+      isProfessional: user.is_professional_account || false,
+      categoryName: user.category_name || user.business_category_name || null,
+      pronouns: user.pronouns || [],
+      externalUrl: user.external_url || null,
+      mutualFollowers: user.edge_mutual_followed_by?.count || 0,
+      mutualFollowerNames: (user.edge_mutual_followed_by?.edges || []).map(
+        (e) => e.node?.username,
+      ),
+      followedByViewer: user.followed_by_viewer || false,
+      followsViewer: user.follows_viewer || false,
+      highlightReelCount: user.highlight_reel_count || 0,
+      isJoinedRecently: user.is_joined_recently || false,
     };
   }
 
@@ -200,6 +209,56 @@ const InstagramAPI = (() => {
     }
 
     return users;
+  }
+
+  // Fetch a user's recent posts via feed endpoint
+  async function getUserPosts(userId, count = 6) {
+    const url = `https://www.instagram.com/api/v1/feed/user/${userId}/?count=${count}`;
+    const resp = await rateLimitedFetch(url);
+    const data = await resp.json();
+
+    return (data.items || []).map((item) => {
+      const candidates = item.image_versions2?.candidates || [];
+      const bestImage = candidates[0]; // largest resolution
+
+      return {
+        id: item.pk,
+        mediaType: item.media_type, // 1=photo, 2=video, 8=carousel
+        imageUrl: bestImage?.url || null,
+        imageWidth: bestImage?.width || null,
+        imageHeight: bestImage?.height || null,
+        caption: item.caption?.text || null,
+        likeCount: item.like_count || 0,
+        commentCount: item.comment_count || 0,
+        playCount: item.play_count || 0,
+        takenAt: item.taken_at,
+        location: item.location
+          ? {
+              name: item.location.name,
+              city: item.location.city,
+              lat: item.location.lat,
+              lng: item.location.lng,
+            }
+          : null,
+        usertags: (item.usertags?.in || []).map((t) => ({
+          username: t.user?.username,
+          id: t.user?.pk,
+        })),
+        musicMetadata: item.music_metadata?.music_info?.music_asset_info
+          ? {
+              title: item.music_metadata.music_info.music_asset_info.title,
+              artist:
+                item.music_metadata.music_info.music_asset_info.display_artist,
+            }
+          : null,
+        isPaidPartnership: item.is_paid_partnership || false,
+        productType: item.product_type || null, // "clips" = reel
+        coauthors: (item.coauthor_producers || []).map((c) => ({
+          username: c.username,
+          id: c.pk,
+        })),
+      };
+    });
   }
 
   // Send a DM — shoot your shot (legacy REST endpoint)
@@ -362,6 +421,7 @@ const InstagramAPI = (() => {
     checkRelationship,
     setGraphQLTokens,
     hasGraphQLTokens,
+    getUserPosts,
     getHeaders,
   };
 })();

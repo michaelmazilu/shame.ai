@@ -97,17 +97,57 @@ const SwipeUI = (() => {
     card.dataset.userId = profile.id;
     card.dataset.username = profile.username;
 
+    // Build recent posts grid from feed data
+    const posts = profile.recentPosts || [];
+    const postImages = posts.filter((p) => p.imageUrl).slice(0, 6);
     const recentPostHtml =
-      profile.recentPosts && profile.recentPosts.length > 0
+      postImages.length > 0
         ? `<div class="st-recent-posts">
-            ${profile.recentPosts
+            ${postImages
               .map(
                 (p) =>
-                  `<img src="${p.thumbnail || p.url}" class="st-post-thumb" alt="post" />`,
+                  `<img src="${p.imageUrl}" class="st-post-thumb" alt="post" />`,
               )
               .join("")}
            </div>`
         : "";
+
+    // Location from their posts
+    const locations = posts
+      .filter((p) => p.location?.name)
+      .map((p) => p.location.name);
+    const uniqueLocations = [...new Set(locations)].slice(0, 2);
+    const locationHtml =
+      uniqueLocations.length > 0
+        ? `<p class="st-card-location">📍 ${uniqueLocations.join(", ")}</p>`
+        : "";
+
+    // Engagement info
+    const totalLikes = posts.reduce((sum, p) => sum + (p.likeCount || 0), 0);
+    const avgLikes =
+      posts.length > 0 ? Math.round(totalLikes / posts.length) : 0;
+
+    // Badges line (verified, pronouns, category)
+    const badges = [];
+    if (profile.isVerified) badges.push("✓ Verified");
+    if (profile.pronouns?.length) badges.push(profile.pronouns.join("/"));
+    if (profile.categoryName) badges.push(profile.categoryName);
+    const badgeHtml =
+      badges.length > 0
+        ? `<p class="st-card-badges">${badges.join(" · ")}</p>`
+        : "";
+
+    // Mutual followers
+    const mutualHtml =
+      profile.mutualFollowers > 0
+        ? `<span class="st-mutual">${profile.mutualFollowers} mutual${profile.mutualFollowerNames?.length ? " incl. " + profile.mutualFollowerNames.slice(0, 2).join(", ") : ""}</span>`
+        : "";
+
+    // Latest caption snippet
+    const latestCaption = posts.find((p) => p.caption)?.caption || "";
+    const captionHtml = latestCaption
+      ? `<p class="st-card-caption">"${truncate(latestCaption, 100)}"</p>`
+      : "";
 
     card.innerHTML = `
       <div class="st-card-image" style="background-image: url('${profile.profilePic}')">
@@ -117,11 +157,16 @@ const SwipeUI = (() => {
       <div class="st-card-info">
         <h3 class="st-card-name">${profile.fullName || profile.username}</h3>
         <p class="st-card-username">@${profile.username}</p>
+        ${badgeHtml}
         ${profile.bio ? `<p class="st-card-bio">${truncate(profile.bio, 120)}</p>` : ""}
+        ${locationHtml}
         <div class="st-card-stats">
           ${profile.followers != null ? `<span>${formatCount(profile.followers)} followers</span>` : ""}
-          ${profile.mutualFollowers ? `<span class="st-mutual">${profile.mutualFollowers}</span>` : ""}
+          ${profile.postCount ? `<span>${formatCount(profile.postCount)} posts</span>` : ""}
+          ${avgLikes > 0 ? `<span>~${formatCount(avgLikes)} avg likes</span>` : ""}
+          ${mutualHtml}
         </div>
+        ${captionHtml}
         ${recentPostHtml}
       </div>
     `;
