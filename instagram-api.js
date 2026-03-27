@@ -267,6 +267,18 @@ const InstagramAPI = (() => {
     return { success: resp.ok, data };
   }
 
+  // Check relationship with a specific user (does THEY follow YOU, etc.)
+  async function checkRelationship(userId) {
+    const url = `https://www.instagram.com/api/v1/friendships/show/${userId}/`;
+    const resp = await rateLimitedFetch(url);
+    const data = await resp.json();
+    return {
+      followedBy: !!data.followed_by,
+      following: !!data.following,
+      outgoingRequest: !!data.outgoing_request,
+    };
+  }
+
   // ── GraphQL DM send (IGDirectTextSendMutation) ──
 
   let graphQLTokens = null;
@@ -347,6 +359,7 @@ const InstagramAPI = (() => {
     sendDMGraphQL,
     followUser,
     unfollowUser,
+    checkRelationship,
     setGraphQLTokens,
     hasGraphQLTokens,
     getHeaders,

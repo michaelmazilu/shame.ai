@@ -21,6 +21,7 @@
   let seenProfiles = new Set();
   let dmsSentThisHour = 0;
   let isLoading = false;
+  let currentUserId = null;
 
   // ── Load persisted state ──
   async function loadState() {
@@ -31,7 +32,6 @@
           if (data.st_settings) settings = { ...settings, ...data.st_settings };
           if (data.st_seen) seenProfiles = new Set(data.st_seen);
 
-          // Reset hourly DM counter if hour has passed
           const now = Date.now();
           if (data.st_dms_reset && now - data.st_dms_reset > 3600000) {
             dmsSentThisHour = 0;
@@ -61,7 +61,6 @@
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
 
-    // Capture GraphQL tokens (fb_dtsg, lsd) from interceptor
     if (event.data?.type === "ST_TOKENS") {
       InstagramAPI.setGraphQLTokens(event.data.payload);
       return;
@@ -71,13 +70,11 @@
 
     const { subtype, payload } = event.data;
     console.log(`[ShotTaker] Intercepted: ${subtype}`);
-
-    // We can use passively intercepted data to enrich profiles
-    // but primarily we fetch profiles actively below
   });
 
-  // ── Listen for settings updates from popup ──
+  // ── Listen for messages from popup AND background ──
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    // Settings updates from popup
     if (msg.type === "ST_SETTINGS_UPDATE") {
       settings = { ...settings, ...msg.settings };
       chrome.storage.local.set({ st_settings: settings });
@@ -99,12 +96,55 @@
         enabled: settings.enabled,
         dmsSent: dmsSentThisHour,
         profilesSeen: seenProfiles.size,
-        queueSize: 0, // Updated by SwipeUI
+        queueSize: 0,
       });
+    }
+
+    // ── Background-delegated API calls ──
+
+    if (msg.type === "ST_EXEC_CHECK_FOLLOWS") {
+      (async () => {
+        try {
+          const result = await InstagramAPI.checkRelationship(msg.userId);
+          sendResponse(result);
+        } catch (e) {
+          console.error("[ShotTaker] checkRelationship error:", e);
+          sendResponse({ followedBy: false, following: false, error: true });
+        }
+      })();
+      return true;
+    }
+
+    if (msg.type === "ST_EXEC_SEND_DM") {
+      (async () => {
+        try {
+          const result = await InstagramAPI.sendDMGraphQL(msg.userId, msg.text);
+          if (result.success) incrementDMCounter();
+          sendResponse({ success: result.success });
+        } catch (e) {
+          console.error("[ShotTaker] sendDM error:", e);
+          sendResponse({ success: false, error: true });
+        }
+      })();
+      return true;
+    }
+
+    if (msg.type === "ST_EXEC_UNFOLLOW") {
+      (async () => {
+        try {
+          const result = await InstagramAPI.unfollowUser(msg.userId);
+          sendResponse({ success: result.success });
+        } catch (e) {
+          console.error("[ShotTaker] unfollow error:", e);
+          sendResponse({ success: false, error: true });
+        }
+      })();
+      return true;
     }
   });
 
   // ── Swipe callbacks ──
+
   async function onSwipeRight(profile) {
     console.log(`[ShotTaker] Shot fired at @${profile.username}!`);
 
@@ -121,35 +161,67 @@
     seenProfiles.add(profile.id);
     saveSeenProfiles();
 
-    // Send DM
-    SwipeUI.showStatus("Sending your shot...", "info");
-
     try {
-      const result = await InstagramAPI.sendDMGraphQL(
-        profile.id,
-        settings.dmTemplate,
-      );
+      // Check if they follow us
+      SwipeUI.showStatus("Checking relationship...", "info");
+      const relationship = await InstagramAPI.checkRelationship(profile.id);
 
-      if (result.success) {
-        incrementDMCounter();
-        SwipeUI.showStatus(`Shot sent to @${profile.username}! 💘`, "success");
+      if (relationship.followedBy) {
+        // They follow us — send DM immediately
+        SwipeUI.showStatus("Sending your shot...", "info");
 
-        // Notify background for history
-        chrome.runtime.sendMessage({
-          type: "ST_SHOT_SENT",
-          profile: {
-            id: profile.id,
+        const result = await InstagramAPI.sendDMGraphQL(
+          profile.id,
+          settings.dmTemplate,
+        );
+
+        if (result.success) {
+          incrementDMCounter();
+          SwipeUI.showStatus(
+            `Shot sent to @${profile.username}! 💘`,
+            "success",
+          );
+
+          chrome.runtime.sendMessage({
+            type: "ST_SHOT_SENT",
+            profile: {
+              id: profile.id,
+              username: profile.username,
+              fullName: profile.fullName,
+            },
+            timestamp: Date.now(),
+          });
+        } else {
+          SwipeUI.showStatus("Failed to send — try again later", "error");
+        }
+      } else {
+        // They don't follow us — follow them and queue for later DM
+        SwipeUI.showStatus(`Following @${profile.username}...`, "info");
+
+        const followResult = await InstagramAPI.followUser(profile.id);
+
+        if (followResult.success) {
+          // Add to pending tracking in background
+          chrome.runtime.sendMessage({
+            type: "ST_ADD_PENDING",
+            userId: profile.id,
             username: profile.username,
             fullName: profile.fullName,
-          },
-          timestamp: Date.now(),
-        });
-      } else {
-        SwipeUI.showStatus("Failed to send — try again later", "error");
+            dmTemplate: settings.dmTemplate,
+          });
+
+          SwipeUI.showStatus(
+            `Following @${profile.username} — will DM when they follow back`,
+            "info",
+            5000,
+          );
+        } else {
+          SwipeUI.showStatus("Failed to follow — try again later", "error");
+        }
       }
     } catch (err) {
-      console.error("[ShotTaker] DM error:", err);
-      SwipeUI.showStatus("Error sending DM", "error");
+      console.error("[ShotTaker] Swipe right error:", err);
+      SwipeUI.showStatus("Error — try again later", "error");
     }
   }
 
@@ -159,74 +231,127 @@
     saveSeenProfiles();
   }
 
-  // ── Fetch profiles from all sources ──
+  // ── Profile loading helpers ──
+
+  function filterAndDedupe(profiles) {
+    const unseen = profiles.filter((p) => {
+      if (seenProfiles.has(p.id)) return false;
+      if (p.isPrivate) return false;
+      if (p.id === currentUserId) return false;
+      return true;
+    });
+
+    const uniqueMap = new Map();
+    for (const p of unseen) {
+      if (!uniqueMap.has(p.id)) uniqueMap.set(p.id, p);
+    }
+    return [...uniqueMap.values()];
+  }
+
+  async function enrichProfiles(profiles, limit = 20) {
+    const enriched = [];
+    for (const p of profiles.slice(0, limit)) {
+      try {
+        const full = await InstagramAPI.getProfileInfo(p.username);
+        enriched.push(full || p);
+      } catch (e) {
+        enriched.push(p);
+      }
+    }
+    return enriched;
+  }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ── Waterfall profile loading ──
+
   async function loadProfiles() {
     if (isLoading) return;
     isLoading = true;
 
-    const allProfiles = [];
+    if (!currentUserId) {
+      SwipeUI.showStatus("Could not detect your account", "error");
+      isLoading = false;
+      return;
+    }
 
     try {
-      // Source 1: Suggested users
+      // Tier 1: Your followers (warmest leads)
+      SwipeUI.showStatus("Loading your followers...", "info");
+      try {
+        const followers = await InstagramAPI.getAllFollowers(
+          currentUserId,
+          200,
+        );
+        console.log(`[ShotTaker] Tier 1: ${followers.length} followers`);
+
+        const tier1 = filterAndDedupe(followers);
+        if (tier1.length > 0) {
+          const enriched = await enrichProfiles(tier1);
+          SwipeUI.setProfiles(enriched);
+          SwipeUI.showStatus(`${enriched.length} followers loaded`, "success");
+        }
+      } catch (e) {
+        console.warn("[ShotTaker] Tier 1 (followers) failed:", e);
+      }
+
+      // Tier 2: Friends of friends
+      SwipeUI.showStatus("Loading friends of friends...", "info");
+      try {
+        const following = await InstagramAPI.getAllFollowing(
+          currentUserId,
+          500,
+        );
+        const sampled = shuffle(following).slice(0, 10);
+        const fofProfiles = [];
+
+        for (const f of sampled) {
+          try {
+            const result = await InstagramAPI.getFollowers(f.id, 25);
+            fofProfiles.push(...result.users);
+          } catch (e) {
+            // Skip this person's followers on error
+          }
+        }
+
+        console.log(
+          `[ShotTaker] Tier 2: ${fofProfiles.length} friends-of-friends`,
+        );
+
+        const tier2 = filterAndDedupe(fofProfiles);
+        if (tier2.length > 0) {
+          const enriched = await enrichProfiles(tier2);
+          SwipeUI.addProfiles(enriched);
+          SwipeUI.showStatus(
+            `+${enriched.length} friends-of-friends loaded`,
+            "success",
+          );
+        }
+      } catch (e) {
+        console.warn("[ShotTaker] Tier 2 (FoF) failed:", e);
+      }
+
+      // Tier 3: Suggested users
       if (settings.sources.suggested) {
         try {
           const suggested = await InstagramAPI.getSuggestedUsers();
-          allProfiles.push(...suggested);
-          console.log(`[ShotTaker] Got ${suggested.length} suggested profiles`);
-        } catch (e) {
-          console.warn("[ShotTaker] Failed to fetch suggested:", e);
-        }
-      }
+          console.log(`[ShotTaker] Tier 3: ${suggested.length} suggested`);
 
-      // Source 2: Explore page
-      if (settings.sources.explore) {
-        try {
-          const explore = await InstagramAPI.getExploreProfiles();
-          allProfiles.push(...explore);
-          console.log(`[ShotTaker] Got ${explore.length} explore profiles`);
-        } catch (e) {
-          console.warn("[ShotTaker] Failed to fetch explore:", e);
-        }
-      }
-
-      // Filter out seen profiles and deduplicate
-      const unseenProfiles = allProfiles.filter((p) => {
-        if (seenProfiles.has(p.id)) return false;
-        if (p.isPrivate) return false; // Skip private accounts
-        return true;
-      });
-
-      // Deduplicate by ID
-      const uniqueMap = new Map();
-      for (const p of unseenProfiles) {
-        if (!uniqueMap.has(p.id)) uniqueMap.set(p.id, p);
-      }
-      const unique = [...uniqueMap.values()];
-
-      console.log(
-        `[ShotTaker] ${unique.length} unique unseen profiles ready to swipe`,
-      );
-
-      // Enrich top profiles with full info (profile pic HD, bio, followers)
-      const enriched = [];
-      for (const p of unique.slice(0, 20)) {
-        try {
-          const full = await InstagramAPI.getProfileInfo(p.username);
-          if (full) {
-            enriched.push(full);
-          } else {
-            enriched.push(p);
+          const tier3 = filterAndDedupe(suggested);
+          if (tier3.length > 0) {
+            const enriched = await enrichProfiles(tier3);
+            SwipeUI.addProfiles(enriched);
           }
         } catch (e) {
-          enriched.push(p); // Use basic info if enrichment fails
+          console.warn("[ShotTaker] Tier 3 (suggested) failed:", e);
         }
-      }
-
-      if (enriched.length > 0) {
-        SwipeUI.setProfiles(enriched);
-        SwipeUI.showStatus(`${enriched.length} profiles loaded`, "success");
-      } else {
-        SwipeUI.showStatus("No new profiles found — try again later", "info");
       }
     } catch (err) {
       console.error("[ShotTaker] Profile loading error:", err);
@@ -240,6 +365,12 @@
   async function init() {
     // Wait for IG to fully load
     await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Get current user ID from cookie
+    currentUserId = document.cookie.match(/ds_user_id=(\d+)/)?.[1];
+    if (!currentUserId) {
+      console.warn("[ShotTaker] Could not find ds_user_id — not logged in?");
+    }
 
     await loadState();
 

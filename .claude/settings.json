@@ -19,7 +19,9 @@
       "Bash(jq -e '.hooks.SessionStart[] | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' .claude/settings.json)",
       "Bash(node test/test-followers.js)",
       "Bash(node test/test-show-many.js)",
-      "Bash(node test/test-api.js follow-rt 63386596680)"
+      "Bash(node test/test-api.js follow-rt 63386596680)",
+      "Bash(python3 test_profile_data.py)",
+      "Bash(pip3 install:*)"
     ]
   },
   "hooks": {

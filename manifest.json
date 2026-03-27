@@ -3,7 +3,7 @@
   "name": "ShotTaker",
   "version": "1.0.0",
   "description": "Tinder-style swiping UI for Instagram — shoot your shot",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "alarms"],
   "background": {
     "service_worker": "background.js"
   },

@@ -8,8 +8,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sourceExplore = document.getElementById("source-explore");
   const sourceFof = document.getElementById("source-fof");
   const historyList = document.getElementById("history-list");
+  const pendingList = document.getElementById("pending-list");
   const statShots = document.getElementById("stat-shots");
   const statSeen = document.getElementById("stat-seen");
+  const statPending = document.getElementById("stat-pending");
   const btnReset = document.getElementById("btn-reset");
 
   // Load current settings
@@ -51,6 +53,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       historyList.appendChild(item);
     }
   });
+
+  // Load pending follow-backs
+  chrome.runtime.sendMessage({ type: "ST_GET_PENDING" }, (resp) => {
+    const pending = (resp?.pending || []).filter((p) => p.status === "pending");
+    statPending.textContent = pending.length;
+
+    if (pending.length === 0) return;
+
+    pendingList.innerHTML = "";
+    for (const entry of pending) {
+      const item = document.createElement("div");
+      item.className = "history-item";
+      const ago = timeSince(entry.followedAt);
+      item.innerHTML = `
+        <span class="history-username">@${entry.username}</span>
+        <span class="history-time">${ago} ago</span>
+      `;
+      pendingList.appendChild(item);
+    }
+  });
+
+  function timeSince(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  }
 
   // Save settings on change
   function saveSettings() {
@@ -113,7 +146,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       chrome.runtime.sendMessage({ type: "ST_RESET" }, () => {
         statShots.textContent = "0";
         statSeen.textContent = "0";
+        statPending.textContent = "0";
         historyList.innerHTML = `<div class="history-item" style="color: #8e8e8e; text-align: center;">No shots fired yet</div>`;
+        pendingList.innerHTML = `<div class="history-item" style="color: #8e8e8e; text-align: center;">No pending follows</div>`;
       });
     }
   });

@@ -18,13 +18,6 @@ There are no tests, linter, or package manager configured.
 
 ## Architecture
 
-There are **two versions** of the extension in this repo:
-
-- **Root-level files** — the primary/latest version with popup UI, separate modules
-- **`extension/`** — an earlier or alternate version with a single monolithic `content.js`
-
-### Root-level version (primary)
-
 **Content scripts** (injected into instagram.com pages in this order per manifest):
 
 1. `instagram-api.js` — IIFE exposing `InstagramAPI` global. Wraps IG internal REST endpoints (`/api/v1/...`) with rate-limited fetch (2.5s minimum between calls, 30s backoff on 429). Handles: suggested users, explore profiles, profile info enrichment, following lists, and DM sending.

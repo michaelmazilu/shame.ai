@@ -214,14 +214,14 @@ const SwipeUI = (() => {
     }, 400);
   }
 
-  function showStatus(message, type = "info") {
+  function showStatus(message, type = "info", duration = 3000) {
     const status = container.querySelector("#st-status");
     status.textContent = message;
     status.className = `st-status-${type}`;
     status.style.opacity = 1;
     setTimeout(() => {
       status.style.opacity = 0;
-    }, 3000);
+    }, duration);
   }
 
   function updateCounter() {
