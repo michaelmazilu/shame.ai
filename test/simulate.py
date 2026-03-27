@@ -28,13 +28,15 @@ from config import ACCOUNTS, GRAPHQL_TOKENS, headers as config_headers
 
 ACTIVE = ACCOUNTS[1]
 
-RATE_LIMIT_DELAY = 2.5  # seconds between API calls
+DELAY_READ = 0.5  # profile lookups, followers, explore
+DELAY_WRITE = 3.0  # DMs, follows, unfollows
 
 # ── State ──
 
 seen_profiles = set()
 pending_follows = []  # list of dicts: {userId, username, fullName, followedAt, dmTemplate, status, retries}
 shot_history = []
+cached_relationships = {}  # userId → {followedBy, following, outgoingRequest}
 dm_template = "Hey! I came across your profile and had to say hi 👋"
 
 # ── HTTP helpers ──
@@ -48,9 +50,12 @@ def rate_limited_request(url, method="GET", data=None, extra_headers=None):
     """Make a rate-limited request to Instagram API."""
     global last_call_time
 
+    is_write = method == "POST"
+    min_delay = DELAY_WRITE if is_write else DELAY_READ
+
     elapsed = time.time() - last_call_time
-    if elapsed < RATE_LIMIT_DELAY:
-        wait = RATE_LIMIT_DELAY - elapsed
+    if elapsed < min_delay:
+        wait = min_delay - elapsed
         print(f"  (rate limit: waiting {wait:.1f}s)")
         time.sleep(wait)
     last_call_time = time.time()
@@ -259,6 +264,26 @@ def check_relationship(user_id):
     }
 
 
+def check_relationship_many(user_ids):
+    """Bulk check relationship status for multiple users in one API call."""
+    url = "https://www.instagram.com/api/v1/friendships/show_many/"
+    status, data = rate_limited_request(
+        url, method="POST", data={"user_ids": ",".join(str(uid) for uid in user_ids)}
+    )
+    if status != 200:
+        print(f"  [ERR] check_relationship_many: {status}")
+        return {}
+    statuses = data.get("friendship_statuses", {})
+    result = {}
+    for uid, s in statuses.items():
+        result[uid] = {
+            "followedBy": bool(s.get("followed_by")),
+            "following": bool(s.get("following")),
+            "outgoingRequest": bool(s.get("outgoing_request")),
+        }
+    return result
+
+
 def follow_user(user_id):
     url = f"https://www.instagram.com/api/v1/friendships/create/{user_id}/"
     status, data = rate_limited_request(
@@ -418,7 +443,7 @@ def print_profile_card(profile, index, total):
             mutual_str += f" incl. @{', @'.join(names[:3])}"
         print(f"  {CYAN}{mutual_str}{RESET}")
 
-    # Relationship
+    # Relationship (from profile enrichment)
     rel_parts = []
     if profile.get("followedByViewer"):
         rel_parts.append(f"{GREEN}you follow them{RESET}")
@@ -426,6 +451,20 @@ def print_profile_card(profile, index, total):
         rel_parts.append(f"{GREEN}they follow you{RESET}")
     if rel_parts:
         print(f"  {' | '.join(rel_parts)}")
+
+    # Relationship (from bulk show_many check)
+    bulk_rel = cached_relationships.get(profile.get("id"))
+    if bulk_rel:
+        bulk_parts = []
+        if bulk_rel["followedBy"]:
+            bulk_parts.append(f"{GREEN}they follow you → DM ready 💘{RESET}")
+        if bulk_rel["following"]:
+            bulk_parts.append(f"{DIM}you follow them{RESET}")
+        if bulk_rel["outgoingRequest"]:
+            bulk_parts.append(f"{YELLOW}pending follow request{RESET}")
+        if not bulk_rel["followedBy"] and not bulk_rel["following"]:
+            bulk_parts.append(f"{DIM}no relationship{RESET}")
+        print(f"  {' | '.join(bulk_parts)}")
 
     # Recent posts
     posts = profile.get("recentPosts", [])
@@ -499,8 +538,13 @@ def print_pending_list():
 def handle_swipe_right(profile):
     seen_profiles.add(profile["id"])
 
-    print(f"\n  Checking relationship with @{profile['username']}...")
-    rel = check_relationship(profile["id"])
+    # Use cached bulk data if available, otherwise fall back to individual call
+    if profile["id"] in cached_relationships:
+        print(f"\n  Relationship with @{profile['username']} (cached from bulk check)")
+        rel = cached_relationships[profile["id"]]
+    else:
+        print(f"\n  Checking relationship with @{profile['username']}...")
+        rel = check_relationship(profile["id"])
 
     print(
         f"  followedBy={rel['followedBy']}  following={rel['following']}  outgoing={rel['outgoingRequest']}"
@@ -688,6 +732,19 @@ def load_profiles_waterfall(enrich=True, enrich_limit=5):
     all_profiles.extend(tier3)
 
     print(f"\n{GREEN}Total: {len(all_profiles)} profiles loaded across 3 tiers{RESET}")
+
+    # Bulk pre-check relationships (up to 100 per call)
+    if all_profiles:
+        print(f"\n{BOLD}Bulk relationship check ({len(all_profiles)} profiles)...{RESET}")
+        ids = [p["id"] for p in all_profiles]
+        for batch_start in range(0, len(ids), 100):
+            batch = ids[batch_start:batch_start + 100]
+            print(f"  Checking batch of {len(batch)}...")
+            statuses = check_relationship_many(batch)
+            cached_relationships.update(statuses)
+        follows_you = sum(1 for r in cached_relationships.values() if r["followedBy"])
+        print(f"  {GREEN}{follows_you} already follow you (instant DM eligible){RESET}")
+
     return all_profiles
 
 

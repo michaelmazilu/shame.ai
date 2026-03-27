@@ -35,6 +35,10 @@ python3 test/test_followers.py
 
 Credentials live in `.env` (gitignored). `test/config.py` reads them via `dotenv` and exports `ACCOUNTS`, `GRAPHQL_TOKENS`, `SHARED_HEADERS`. Other test files import from `config.py`.
 
+## Rules
+
+When adding or changing any feature in the extension (new API endpoint, new data flow, new logic), ALWAYS add a corresponding implementation in `test/` so it can be tested outside the browser. The `test/` scripts are the backend mirror of the extension — keep them in sync.
+
 ## Architecture
 
 **Content scripts** (injected into instagram.com pages in this order per manifest):
@@ -77,4 +81,4 @@ All prefixed with `st_`: `st_settings`, `st_seen`, `st_shot_history`, `st_dms_ho
 
 ### Rate limiting
 
-`InstagramAPI` enforces a minimum 2.5s between API calls with automatic 30s backoff on HTTP 429. DM sends are additionally capped per hour (default 10, configurable in popup) with the counter persisted in `chrome.storage.local` and reset after 1 hour.
+`InstagramAPI` uses split rate limiting: 500ms between reads (profile lookups, followers, explore) and 3s between writes (DMs, follows, unfollows), with automatic 30s backoff on HTTP 429. DM sends are additionally capped per hour (default 10, configurable in popup) with the counter persisted in `chrome.storage.local` and reset after 1 hour.

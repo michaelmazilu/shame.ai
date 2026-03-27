@@ -17,13 +17,18 @@ const InstagramAPI = (() => {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // Rate-limit wrapper — minimum 2.5s between calls
+  // Rate-limit wrapper — split delays: fast reads, safe writes
+  const DELAY_READ = 500; // profile lookups, followers, explore
+  const DELAY_WRITE = 3000; // DMs, follows, unfollows
   let lastCallTime = 0;
   async function rateLimitedFetch(url, options = {}) {
+    const isWrite = options.method === "POST";
+    const minDelay = isWrite ? DELAY_WRITE : DELAY_READ;
+
     const now = Date.now();
     const elapsed = now - lastCallTime;
-    if (elapsed < 2500) {
-      await delay(2500 - elapsed);
+    if (elapsed < minDelay) {
+      await delay(minDelay - elapsed);
     }
     lastCallTime = Date.now();
 
@@ -338,6 +343,36 @@ const InstagramAPI = (() => {
     };
   }
 
+  // Bulk check relationship status for multiple users in one call
+  async function checkRelationshipMany(userIds) {
+    const url = "https://www.instagram.com/api/v1/friendships/show_many/";
+    const body = new URLSearchParams({
+      user_ids: userIds.join(","),
+    });
+
+    const resp = await rateLimitedFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: body,
+    });
+
+    const data = await resp.json();
+    const statuses = data.friendship_statuses || {};
+
+    // Normalize to same format as checkRelationship, keyed by userId
+    const result = {};
+    for (const [id, status] of Object.entries(statuses)) {
+      result[id] = {
+        followedBy: !!status.followed_by,
+        following: !!status.following,
+        outgoingRequest: !!status.outgoing_request,
+      };
+    }
+    return result;
+  }
+
   // ── GraphQL DM send (IGDirectTextSendMutation) ──
 
   let graphQLTokens = null;
@@ -419,6 +454,7 @@ const InstagramAPI = (() => {
     followUser,
     unfollowUser,
     checkRelationship,
+    checkRelationshipMany,
     setGraphQLTokens,
     hasGraphQLTokens,
     getUserPosts,

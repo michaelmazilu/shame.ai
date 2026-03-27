@@ -7,6 +7,7 @@ Reports: successful calls, 429s, other errors, and effective calls/minute.
 
 import json
 import os
+import random
 import ssl
 import sys
 import time
@@ -14,7 +15,7 @@ import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import ACCOUNTS, headers as config_headers
+from config import ACCOUNTS, GRAPHQL_TOKENS, headers as config_headers
 
 ACTIVE = ACCOUNTS[1]
 ssl_ctx = ssl.create_default_context()
@@ -261,6 +262,106 @@ def main():
         return raw_request(url)
 
     all_results.append(benchmark_endpoint("GET friendship/show", call_friendship))
+    time.sleep(3)
+
+    # ── Test 7: Follow (create) ──
+    # Alternates: follow on odd calls, unfollow on even — net neutral
+    follow_toggle = [0]
+    follow_target = user_ids[0]  # use first following user (already followed)
+    def call_follow():
+        follow_toggle[0] += 1
+        if follow_toggle[0] % 2 == 1:
+            url = f"https://www.instagram.com/api/v1/friendships/create/{follow_target}/"
+        else:
+            url = f"https://www.instagram.com/api/v1/friendships/destroy/{follow_target}/"
+        return raw_request(url, method="POST", data={"container_module": "profile", "user_id": follow_target})
+
+    all_results.append(benchmark_endpoint("POST follow/unfollow (toggle)", call_follow))
+    # Re-follow the target to leave state clean
+    raw_request(
+        f"https://www.instagram.com/api/v1/friendships/create/{follow_target}/",
+        method="POST", data={"container_module": "profile", "user_id": follow_target},
+    )
+    time.sleep(3)
+
+    # ── Test 8: Send DM (GraphQL) ──
+    # Sends to self to avoid spamming real users
+    def call_dm():
+        offline_id = str(random.randint(10**18, 9 * 10**18))
+        variables = {
+            "ig_thread_igid": None,
+            "offline_threading_id": offline_id,
+            "recipient_igids": [str(my_id)],
+            "replied_to_client_context": None,
+            "replied_to_item_id": None,
+            "reply_to_message_id": None,
+            "sampled": None,
+            "text": {"sensitive_string_value": "benchmark test"},
+            "mentions": [],
+            "mentioned_user_ids": [],
+            "commands": None,
+        }
+        form_data = {
+            "fb_dtsg": GRAPHQL_TOKENS["fb_dtsg"],
+            "lsd": GRAPHQL_TOKENS["lsd"],
+            "__a": "1",
+            "__user": "0",
+            "__comet_req": "7",
+            "fb_api_caller_class": "RelayModern",
+            "fb_api_req_friendly_name": "IGDirectTextSendMutation",
+            "server_timestamps": "true",
+            "variables": json.dumps(variables),
+            "doc_id": "25288447354146606",
+        }
+        return raw_request(
+            "https://www.instagram.com/api/graphql",
+            method="POST",
+            data=form_data,
+            extra_headers={
+                "x-fb-friendly-name": "IGDirectTextSendMutation",
+                "x-fb-lsd": GRAPHQL_TOKENS["lsd"],
+            },
+        )
+
+    all_results.append(benchmark_endpoint("POST DM (GraphQL)", call_dm))
+    time.sleep(3)
+
+    # ── Test 9: Topical Explore ──
+    def call_explore():
+        return raw_request(
+            "https://www.instagram.com/api/v1/discover/topical_explore/",
+            method="POST",
+            data={"module": "explore_popular"},
+        )
+
+    all_results.append(benchmark_endpoint("POST topical_explore", call_explore))
+    time.sleep(3)
+
+    # ── Test 10: Legacy DM (direct_v2 broadcast) ──
+    def call_dm_legacy():
+        return raw_request(
+            "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/text/",
+            method="POST",
+            data={
+                "recipient_users": json.dumps([str(my_id)]),
+                "action": "send_item",
+                "text": "benchmark test legacy",
+            },
+        )
+
+    all_results.append(benchmark_endpoint("POST DM (legacy direct_v2)", call_dm_legacy))
+    time.sleep(3)
+
+    # ── Test 11: Show Many (bulk friendship check) ──
+    bulk_ids = ",".join(user_ids[:10])
+    def call_show_many():
+        return raw_request(
+            "https://www.instagram.com/api/v1/friendships/show_many/",
+            method="POST",
+            data={"user_ids": bulk_ids},
+        )
+
+    all_results.append(benchmark_endpoint("POST friendships/show_many", call_show_many))
 
     # ── Final comparison ──
     print(f"\n\n{BOLD}{'=' * 70}{RESET}")
