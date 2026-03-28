@@ -309,6 +309,26 @@ export default function Roulette({ mode = "group", groupMembers }: RouletteProps
     return () => clearInterval(iv);
   }, [mpSession]);
 
+  // Fetch logged-in user's own profile for solo mode
+  const [selfProfile, setSelfProfile] = useState<{ username: string; profilePic?: string } | null>(null);
+  useEffect(() => {
+    if (!isSolo) return;
+    const username = typeof window !== "undefined" ? localStorage.getItem("st_username") : null;
+    if (!username) return;
+    fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.profile) setSelfProfile({ username: data.profile.username, profilePic: data.profile.profilePic });
+      })
+      .catch(() => {
+        setSelfProfile({ username });
+      });
+  }, [isSolo]);
+
   const profileItems: SlotItem[] = state.profiles.map((p) => ({
     id: p.id, primary: `@${p.username}`, secondary: p.fullName || undefined, pic: p.profilePic || undefined,
   }));
@@ -384,7 +404,6 @@ export default function Roulette({ mode = "group", groupMembers }: RouletteProps
           </p>
         </motion.div>
 
-        <StatsBar victimCount={state.profiles.length} ritualCount={RITUALS.length} />
 
         {/* === SLOT MACHINE === */}
         <div className="flex-1 flex items-stretch min-h-0 mb-2 w-full max-w-4xl relative">
@@ -433,7 +452,18 @@ export default function Roulette({ mode = "group", groupMembers }: RouletteProps
         <div className="max-w-2xl mx-auto w-full">
           <AnimatePresence>
             {state.phase === "result" && state.victim && state.ritual && state.target && (
-              <ResultCard victim={state.victim} ritual={state.ritual} target={state.target} message={state.message} messageLoading={state.messageLoading} error={state.error} solo={isSolo} onMessageChange={state.setMessage} onReroll={state.rerollMessage} onSend={state.sendMessage} />
+              <ResultCard
+                victim={isSolo && selfProfile ? { ...state.victim, username: selfProfile.username, profilePic: selfProfile.profilePic } : state.victim}
+                ritual={state.ritual}
+                target={state.target}
+                message={state.message}
+                messageLoading={state.messageLoading}
+                error={state.error}
+                solo={isSolo}
+                onMessageChange={state.setMessage}
+                onReroll={state.rerollMessage}
+                onSend={state.sendMessage}
+              />
             )}
           </AnimatePresence>
 
