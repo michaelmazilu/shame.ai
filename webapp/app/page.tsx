@@ -163,7 +163,7 @@ function MockStory() {
 
 function MockNotification() {
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-5 w-full">
+    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-5 w-80">
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-100">
         <div className="w-5 h-5 rounded-md bg-gradient-to-br from-pink to-rose flex items-center justify-center">
           <span className="text-[8px] text-white font-bold">S</span>
