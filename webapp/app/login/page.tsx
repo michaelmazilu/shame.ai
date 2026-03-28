@@ -121,17 +121,6 @@ export default function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45 }}
-            className="mt-6 text-center text-sm"
-          >
-            <Link href="/room" className="text-rose font-medium hover:underline">
-              Group room (no Instagram login)
-            </Link>
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
             className="mt-8 text-center text-xs text-zinc-400"
           >
             Your credentials are encrypted and never stored in plain text.
