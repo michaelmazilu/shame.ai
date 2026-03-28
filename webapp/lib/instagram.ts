@@ -374,7 +374,7 @@ export async function checkRelationship(session: IGSession, userId: string) {
 export async function loginToInstagram(
   username: string,
   password: string,
-): Promise<{ success: boolean; session?: IGSession; twoFactorRequired?: boolean; twoFactorInfo?: Record<string, unknown>; error?: string }> {
+): Promise<{ success: boolean; session?: IGSession; twoFactorRequired?: boolean; twoFactorInfo?: Record<string, unknown>; checkpointRequired?: boolean; checkpointInfo?: Record<string, unknown>; error?: string }> {
   // Step 1: Get initial CSRF token
   const initResp = await fetch(`${BASE}/accounts/login/`, {
     headers: { "user-agent": USER_AGENT },
@@ -438,6 +438,40 @@ export async function loginToInstagram(
       twoFactorRequired: true,
       twoFactorInfo: {
         identifier: loginData.two_factor_info?.two_factor_identifier,
+        username,
+        cookies: allCookies.map((c) => c.split(";")[0]).join("; "),
+        csrfToken,
+      },
+    };
+  }
+
+  if (loginData.message === "checkpoint_required" || loginData.checkpoint_url) {
+    const checkpointUrl = loginData.checkpoint_url as string;
+
+    // Request that Instagram send the verification code
+    try {
+      const challengeResp = await fetch(
+        checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`,
+        {
+          headers: {
+            "user-agent": USER_AGENT,
+            cookie: allCookies.map((c) => c.split(";")[0]).join("; "),
+            referer: `${BASE}/accounts/login/`,
+          },
+          redirect: "manual",
+        },
+      );
+      const challengeCookies = challengeResp.headers.getSetCookie?.() || [];
+      allCookies.push(...challengeCookies);
+    } catch {
+      // Non-critical — the code may be sent automatically
+    }
+
+    return {
+      success: false,
+      checkpointRequired: true,
+      checkpointInfo: {
+        checkpointUrl,
         username,
         cookies: allCookies.map((c) => c.split(";")[0]).join("; "),
         csrfToken,
@@ -515,6 +549,95 @@ export async function verifyTwoFactor(
 
   if (!sessionId || !dsUserId) {
     return { success: false, error: "2FA passed but session cookies missing" };
+  }
+
+  return {
+    success: true,
+    session: {
+      cookies: finalCookieStr,
+      csrfToken: finalCsrf,
+      userId: dsUserId,
+      username,
+    },
+  };
+}
+
+export async function verifyCheckpoint(
+  code: string,
+  checkpointUrl: string,
+  username: string,
+  existingCookies: string,
+  csrfToken: string,
+): Promise<{ success: boolean; session?: IGSession; error?: string }> {
+  const fullUrl = checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`;
+
+  const body = new URLSearchParams({
+    security_code: code,
+  });
+
+  const resp = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      "user-agent": USER_AGENT,
+      "x-csrftoken": csrfToken,
+      "x-requested-with": "XMLHttpRequest",
+      "x-ig-app-id": APP_ID,
+      cookie: existingCookies,
+      referer: fullUrl,
+      origin: BASE,
+    },
+    body,
+    redirect: "manual",
+  });
+
+  const newCookies = resp.headers.getSetCookie?.() || [];
+  const allCookieParts = [existingCookies, ...newCookies.map((c) => c.split(";")[0])];
+  const finalCookieStr = allCookieParts.join("; ");
+
+  // Check if we got session cookies (meaning the checkpoint passed)
+  const sessionId = finalCookieStr.match(/sessionid=([^;]+)/)?.[1];
+  const dsUserId = finalCookieStr.match(/ds_user_id=(\d+)/)?.[1];
+  const finalCsrf = finalCookieStr.match(/csrftoken=([^;]+)/)?.[1] || csrfToken;
+
+  if (!sessionId || !dsUserId) {
+    // Try parsing the response body for an error
+    let errorMsg = "Invalid security code";
+    try {
+      const data = await resp.json();
+      if (data.message) errorMsg = data.message;
+    } catch {
+      // Response might be HTML on success with redirect
+      if (resp.status === 302 || resp.status === 301) {
+        // Redirect usually means success — follow it to get cookies
+        const redirectUrl = resp.headers.get("location");
+        if (redirectUrl) {
+          const followResp = await fetch(
+            redirectUrl.startsWith("http") ? redirectUrl : `${BASE}${redirectUrl}`,
+            {
+              headers: {
+                "user-agent": USER_AGENT,
+                cookie: finalCookieStr,
+              },
+              redirect: "manual",
+            },
+          );
+          const moreCookies = followResp.headers.getSetCookie?.() || [];
+          const fullCookieStr = [finalCookieStr, ...moreCookies.map((c) => c.split(";")[0])].join("; ");
+          const sid = fullCookieStr.match(/sessionid=([^;]+)/)?.[1];
+          const uid = fullCookieStr.match(/ds_user_id=(\d+)/)?.[1];
+          const csrf = fullCookieStr.match(/csrftoken=([^;]+)/)?.[1] || finalCsrf;
+
+          if (sid && uid) {
+            return {
+              success: true,
+              session: { cookies: fullCookieStr, csrfToken: csrf, userId: uid, username },
+            };
+          }
+        }
+      }
+    }
+    return { success: false, error: errorMsg };
   }
 
   return {

@@ -18,6 +18,13 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  if (result.checkpointRequired) {
+    return NextResponse.json({
+      checkpointRequired: true,
+      checkpointInfo: result.checkpointInfo,
+    });
+  }
+
   if (!result.success || !result.session) {
     return NextResponse.json({ error: result.error || "Login failed" }, { status: 401 });
   }

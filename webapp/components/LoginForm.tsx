@@ -7,8 +7,9 @@ export default function LoginForm() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
   const [twoFactorInfo, setTwoFactorInfo] = useState<Record<string, unknown> | null>(null);
+  const [checkpointInfo, setCheckpointInfo] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +29,12 @@ export default function LoginForm() {
 
       if (data.twoFactorRequired) {
         setTwoFactorInfo(data.twoFactorInfo);
+        setLoading(false);
+        return;
+      }
+
+      if (data.checkpointRequired) {
+        setCheckpointInfo(data.checkpointInfo);
         setLoading(false);
         return;
       }
@@ -52,17 +59,29 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
 
-    try {
-      const resp = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: twoFactorCode,
+    const isCheckpoint = !!checkpointInfo;
+    const endpoint = isCheckpoint ? "/api/auth/checkpoint" : "/api/auth/verify";
+    const payload = isCheckpoint
+      ? {
+          code: verifyCode,
+          checkpointUrl: checkpointInfo?.checkpointUrl,
+          username: checkpointInfo?.username,
+          cookies: checkpointInfo?.cookies,
+          csrfToken: checkpointInfo?.csrfToken,
+        }
+      : {
+          code: verifyCode,
           identifier: twoFactorInfo?.identifier,
           username: twoFactorInfo?.username,
           cookies: twoFactorInfo?.cookies,
           csrfToken: twoFactorInfo?.csrfToken,
-        }),
+        };
+
+    try {
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       const data = await resp.json();
@@ -82,14 +101,17 @@ export default function LoginForm() {
     }
   }
 
-  if (twoFactorInfo) {
+  if (twoFactorInfo || checkpointInfo) {
+    const isCheckpoint = !!checkpointInfo;
     return (
       <form onSubmit={handleVerify} className="flex flex-col gap-4 w-full max-w-sm">
         <h2 className="text-lg font-semibold text-center text-neutral-200">
-          Two-Factor Authentication
+          {isCheckpoint ? "Security Checkpoint" : "Two-Factor Authentication"}
         </h2>
         <p className="text-sm text-neutral-400 text-center">
-          Enter the code sent to your phone or authentication app.
+          {isCheckpoint
+            ? "Instagram detected an unusual login. Check your email or phone for a security code."
+            : "Enter the code sent to your phone or authentication app."}
         </p>
 
         <input
@@ -97,8 +119,8 @@ export default function LoginForm() {
           inputMode="numeric"
           autoComplete="one-time-code"
           placeholder="6-digit code"
-          value={twoFactorCode}
-          onChange={(e) => setTwoFactorCode(e.target.value)}
+          value={verifyCode}
+          onChange={(e) => setVerifyCode(e.target.value)}
           className="w-full px-4 py-3 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-center text-lg tracking-widest placeholder:text-neutral-500 focus:outline-none focus:border-white transition"
           maxLength={8}
         />
@@ -107,7 +129,7 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading || !twoFactorCode}
+          disabled={loading || !verifyCode}
           className="w-full py-3 bg-white text-black font-semibold rounded-lg disabled:opacity-40 transition hover:bg-neutral-200"
         >
           {loading ? "Verifying..." : "Verify"}
@@ -115,7 +137,7 @@ export default function LoginForm() {
 
         <button
           type="button"
-          onClick={() => { setTwoFactorInfo(null); setError(""); }}
+          onClick={() => { setTwoFactorInfo(null); setCheckpointInfo(null); setError(""); setVerifyCode(""); }}
           className="text-sm text-neutral-400 hover:text-white transition"
         >
           Back to login
