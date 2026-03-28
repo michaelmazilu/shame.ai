@@ -2,12 +2,26 @@ import type { IGSession } from "./types";
 
 const LOGIN_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes to complete login
 
-export async function launchInstagramLogin(): Promise<{ success: boolean; session?: IGSession; error?: string }> {
+export async function launchInstagramLogin(): Promise<{
+  success: boolean;
+  session?: IGSession;
+  error?: string;
+}> {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return {
+      success: false,
+      error: "Browser login is only available when running locally",
+    };
+  }
+
   let chromium;
   try {
     chromium = (await import("playwright")).chromium;
   } catch {
-    return { success: false, error: "Browser login is only available when running locally" };
+    return {
+      success: false,
+      error: "Browser login is only available when running locally",
+    };
   }
 
   const browser = await chromium.launch({
@@ -24,7 +38,9 @@ export async function launchInstagramLogin(): Promise<{ success: boolean; sessio
     });
 
     const page = await context.newPage();
-    await page.goto("https://www.instagram.com/accounts/login/", { waitUntil: "networkidle" });
+    await page.goto("https://www.instagram.com/accounts/login/", {
+      waitUntil: "networkidle",
+    });
 
     // Wait for the user to log in — we detect success when sessionid cookie appears
     const session = await new Promise<IGSession | null>((resolve) => {
@@ -41,14 +57,18 @@ export async function launchInstagramLogin(): Promise<{ success: boolean; sessio
             clearInterval(poll);
             clearTimeout(timeout);
 
-            const cookieStr = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+            const cookieStr = cookies
+              .map((c) => `${c.name}=${c.value}`)
+              .join("; ");
 
             // Try to grab GraphQL tokens from the page
             let fbDtsg: string | undefined;
             let lsd: string | undefined;
             try {
               const html = await page.content();
-              const dtsgMatch = html.match(/"DTSGInitialData".*?"token":"([^"]+)"/);
+              const dtsgMatch = html.match(
+                /"DTSGInitialData".*?"token":"([^"]+)"/,
+              );
               if (dtsgMatch) fbDtsg = dtsgMatch[1];
               const lsdMatch = html.match(/"LSD".*?"token":"([^"]+)"/);
               if (lsdMatch) lsd = lsdMatch[1];
@@ -74,7 +94,10 @@ export async function launchInstagramLogin(): Promise<{ success: boolean; sessio
     // Try to get the username from the logged-in page
     if (session) {
       try {
-        await page.goto("https://www.instagram.com/accounts/edit/", { waitUntil: "networkidle", timeout: 10000 });
+        await page.goto("https://www.instagram.com/accounts/edit/", {
+          waitUntil: "networkidle",
+          timeout: 10000,
+        });
         const usernameInput = await page.$('input[name="username"]');
         if (usernameInput) {
           session.username = (await usernameInput.inputValue()) || "";
