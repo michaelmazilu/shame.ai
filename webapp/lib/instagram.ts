@@ -204,7 +204,14 @@ export async function getSuggestedUsers(
 ): Promise<IGProfile[]> {
   const url = `${BASE}/api/v1/discover/ayml/`;
   const resp = await igFetch(url, session);
-  const data = await resp.json();
+  const text = await resp.text();
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.warn("[getSuggestedUsers] Invalid JSON response, length:", text.length);
+    return [];
+  }
 
   const groups = data?.groups || [];
   const users: IGProfile[] = [];
@@ -1199,8 +1206,8 @@ export async function loadProfilesFast(
 
   // Tier 1: Followers — single API call, no enrichment
   try {
-    const result = await getFollowers(session, session.userId, 50);
-    const tier1 = filterAndDedupe(result.users, seen, session.userId);
+    const tier1Raw = await getAllFollowers(session, session.userId);
+    const tier1 = filterAndDedupe(tier1Raw, seen, session.userId);
     allProfiles.push(...tier1);
   } catch (e) {
     console.warn("[Profiles] Tier 1 (followers) failed:", e);

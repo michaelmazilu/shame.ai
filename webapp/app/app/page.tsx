@@ -48,14 +48,14 @@ export default function AppPage() {
         ) : (
           <button
             onClick={backToMenu}
-            className="text-sm text-zinc-400 hover:text-zinc-900 transition-colors"
+            className="text-sm font-semibold text-zinc-900 hover:text-rose transition-colors"
           >
             &larr; Back
           </button>
         )}
         <div className="flex items-center gap-2">
           {step !== "pick-mode" && (
-            <span className="text-[10px] uppercase tracking-wider font-bold text-rose bg-rose/10 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-semibold text-white bg-rose px-4 py-1.5 rounded-full">
               {mode === "solo" ? "Solo" : "Group room"}
             </span>
           )}
@@ -89,7 +89,7 @@ export default function AppPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-sm text-zinc-400 mt-2"
+                  className="text-sm text-rose mt-2"
                 >
                   Choose your fate
                 </motion.p>
@@ -145,7 +145,7 @@ export default function AppPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-xs text-zinc-300"
+                className="text-xs text-rose/60"
               >
                 No take-backs once the wheel spins.
               </motion.p>
