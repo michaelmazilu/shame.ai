@@ -1,6 +1,7 @@
 "use client";
 
 const KEY = "shame_mp_session_v1";
+const DEMO_KEY = "shame_mp_session_demo_v1";
 
 export type MpRole = "host" | "guest";
 
@@ -17,10 +18,11 @@ export type MpSession = {
   display_name: string;
 };
 
-export function loadSession(): MpSession | null {
+export function loadSession(opts?: { demo?: boolean }): MpSession | null {
   if (typeof window === "undefined") return null;
+  const key = opts?.demo ? DEMO_KEY : KEY;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as MpSession;
   } catch {
@@ -28,12 +30,14 @@ export function loadSession(): MpSession | null {
   }
 }
 
-export function saveSession(s: MpSession) {
-  localStorage.setItem(KEY, JSON.stringify(s));
+export function saveSession(s: MpSession, opts?: { demo?: boolean }) {
+  const key = opts?.demo ? DEMO_KEY : KEY;
+  localStorage.setItem(key, JSON.stringify(s));
 }
 
-export function clearSession() {
-  localStorage.removeItem(KEY);
+export function clearSession(opts?: { demo?: boolean }) {
+  const key = opts?.demo ? DEMO_KEY : KEY;
+  localStorage.removeItem(key);
 }
 
 /** Token used for heartbeat / room-state / submit for *this* browser user */

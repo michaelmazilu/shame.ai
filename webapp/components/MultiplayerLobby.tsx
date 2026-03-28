@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { mpFetch, getMultiplayerConfig } from "@/lib/multiplayer-api";
+import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
+import {
+  demoCreateRoom,
+  demoJoinByCode,
+  demoJoinSecondPlayer,
+  demoRoomStateFromSession,
+  demoStartRound,
+  demoSubmitResult,
+} from "@/lib/multiplayer-demo";
+import type { RoomState } from "@/lib/multiplayer-types";
 import {
   loadSession,
   saveSession,
@@ -13,36 +22,18 @@ import {
   type MpSession,
 } from "@/lib/multiplayer-session";
 
-type RoomState = {
-  room: { id: string; short_code: string; status: string; created_at: string };
-  you: {
-    id: string;
-    role: string;
-    display_name: string | null;
-    last_seen_at: string;
-  };
-  players: Array<{
-    id: string;
-    role: string;
-    display_name: string | null;
-    last_seen_at: string;
-    joined_at: string;
-  }>;
-  latest_round: {
-    id: string;
-    round_index: number;
-    victim_player_id: string;
-    deed: { type: string; params: Record<string, unknown>; template_id?: string };
-    status: string;
-    result_status?: string | null;
-    result_detail?: string | null;
-    created_at: string;
-    completed_at?: string | null;
-  } | null;
-};
+function PreviewBanner() {
+  return (
+    <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 text-center leading-relaxed">
+      <strong>Preview mode</strong> — you&apos;re seeing the same room UI locally. Add
+      Supabase keys (see <code className="text-[10px]">webapp/.env.example</code>)
+      for a real synced room with others.
+    </p>
+  );
+}
 
 export default function MultiplayerLobby() {
-  const [ready, setReady] = useState(false);
+  const [serverLive, setServerLive] = useState<boolean | null>(null);
   const [session, setSession] = useState<MpSession | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [err, setErr] = useState("");
@@ -54,25 +45,46 @@ export default function MultiplayerLobby() {
   const [secondName, setSecondName] = useState("Guest2");
 
   useEffect(() => {
-    setReady(!!getMultiplayerConfig());
-    setSession(loadSession());
+    let cancelled = false;
+    (async () => {
+      const ok = await getMultiplayerServerReady();
+      if (cancelled) return;
+      setServerLive(ok);
+      setSession(loadSession({ demo: !ok }));
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const refreshState = useCallback(async (s: MpSession) => {
-    const tok = myPlayerToken(s);
-    if (!tok) return;
-    try {
-      const data = await mpFetch<RoomState>("room-state", {
-        room_id: s.room_id,
-        player_token: tok,
-      });
-      setRoomState(data);
-    } catch {
-      /* ignore poll errors */
-    }
-  }, []);
+  const preview = serverLive === false;
+
+  const refreshState = useCallback(
+    async (s: MpSession) => {
+      if (preview) {
+        setRoomState((prev) => {
+          if (prev?.room.id === s.room_id) return prev;
+          return demoRoomStateFromSession(s);
+        });
+        return;
+      }
+      const tok = myPlayerToken(s);
+      if (!tok) return;
+      try {
+        const data = await mpFetch<RoomState>("room-state", {
+          room_id: s.room_id,
+          player_token: tok,
+        });
+        setRoomState(data);
+      } catch {
+        /* ignore poll errors */
+      }
+    },
+    [preview],
+  );
 
   const pulseHeartbeat = useCallback(async (s: MpSession) => {
+    if (preview) return;
     const tasks: Promise<unknown>[] = [];
     if (s.host_player_token) {
       tasks.push(
@@ -103,26 +115,34 @@ export default function MultiplayerLobby() {
     } catch {
       /* non-fatal */
     }
-  }, []);
+  }, [preview]);
 
   useEffect(() => {
     if (!session) return;
     refreshState(session);
+    if (preview) return;
     const poll = window.setInterval(() => refreshState(session), 4000);
     return () => clearInterval(poll);
-  }, [session, refreshState]);
+  }, [session, refreshState, preview]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || preview) return;
     pulseHeartbeat(session);
     const hb = window.setInterval(() => pulseHeartbeat(session), 35000);
     return () => clearInterval(hb);
-  }, [session, pulseHeartbeat]);
+  }, [session, pulseHeartbeat, preview]);
 
   async function onCreate() {
     setErr("");
     setBusy(true);
     try {
+      if (preview) {
+        const { session: s, roomState: rs } = demoCreateRoom(createName);
+        saveSession(s, { demo: true });
+        setSession(s);
+        setRoomState(rs);
+        return;
+      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -156,6 +176,18 @@ export default function MultiplayerLobby() {
     setErr("");
     setBusy(true);
     try {
+      if (preview) {
+        if (!roomState) return;
+        const { session: s, roomState: rs } = demoJoinSecondPlayer(
+          session,
+          roomState,
+          secondName,
+        );
+        saveSession(s, { demo: true });
+        setSession(s);
+        setRoomState(rs);
+        return;
+      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -165,7 +197,7 @@ export default function MultiplayerLobby() {
         short_code: session.short_code,
         display_name: secondName.trim() || "Guest2",
       });
-      const prev = loadSession();
+      const prev = loadSession({ demo: false });
       const s = applyJoinToSession(prev, r, secondName.trim() || "Guest2");
       saveSession(s);
       setSession(s);
@@ -186,6 +218,13 @@ export default function MultiplayerLobby() {
         setErr("Enter a room code");
         return;
       }
+      if (preview) {
+        const { session: s, roomState: rs } = demoJoinByCode(code, joinName);
+        saveSession(s, { demo: true });
+        setSession(s);
+        setRoomState(rs);
+        return;
+      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -195,7 +234,7 @@ export default function MultiplayerLobby() {
         short_code: code,
         display_name: joinName.trim() || "Guest",
       });
-      const prev = loadSession();
+      const prev = loadSession({ demo: false });
       const s = applyJoinToSession(prev, r, joinName.trim() || "Guest");
       saveSession(s);
       setSession(s);
@@ -215,6 +254,11 @@ export default function MultiplayerLobby() {
     setErr("");
     setBusy(true);
     try {
+      if (preview) {
+        if (!roomState) return;
+        setRoomState(demoStartRound(session, roomState));
+        return;
+      }
       await mpFetch("start-round", {
         room_id: session.room_id,
         host_secret: session.host_secret,
@@ -242,6 +286,10 @@ export default function MultiplayerLobby() {
     setBusy(true);
     setErr("");
     try {
+      if (preview && roomState) {
+        setRoomState(demoSubmitResult(roomState, result, detail));
+        return;
+      }
       await mpFetch("submit-result", {
         room_id: session.room_id,
         player_token: tok,
@@ -262,6 +310,12 @@ export default function MultiplayerLobby() {
     setBusy(true);
     setErr("");
     try {
+      if (preview) {
+        clearSession({ demo: true });
+        setSession(null);
+        setRoomState(null);
+        return;
+      }
       await mpFetch("close-room", {
         room_id: session.room_id,
         host_secret: session.host_secret,
@@ -277,33 +331,16 @@ export default function MultiplayerLobby() {
   }
 
   function onLeave() {
-    clearSession();
+    clearSession({ demo: preview });
     setSession(null);
     setRoomState(null);
     setErr("");
   }
 
-  if (!ready) {
+  if (serverLive === null) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
-        <p className="text-zinc-600 text-sm leading-relaxed">
-          Add Supabase keys to{" "}
-          <code className="bg-beige px-1.5 py-0.5 rounded text-xs">
-            webapp/.env.local
-          </code>
-          :
-        </p>
-        <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
-          {`NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
-        </pre>
-        <p className="text-xs text-zinc-400">
-          Copy from repo root <code>.env.local</code> or Supabase → Settings → API.
-          Restart <code>npm run dev</code> after saving.
-        </p>
-        <Link href="/" className="text-rose text-sm font-medium inline-block">
-          ← Back home
-        </Link>
+      <div className="max-w-lg mx-auto px-4 py-24 text-center text-sm text-zinc-500">
+        Loading room…
       </div>
     );
   }
@@ -311,14 +348,26 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
   if (!session) {
     return (
       <div className="max-w-xl mx-auto px-4 py-10 space-y-10">
-        <div className="text-center">
+        <div className="text-center space-y-3">
           <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">
             Group <span className="text-rose">room</span>
           </h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Realtime punishments via Supabase — same API as{" "}
-            <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
+            {preview ? (
+              <>
+                Try create / join below — same screen as the live room. Real
+                multiplayer uses Supabase (
+                <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
+                ).
+              </>
+            ) : (
+              <>
+                Realtime punishments via Supabase — same API as{" "}
+                <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
+              </>
+            )}
           </p>
+          {preview && <PreviewBanner />}
         </div>
 
         {err && (
@@ -413,6 +462,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
           {err}
         </p>
       )}
+
+      {preview && <PreviewBanner />}
 
       <div className="bg-white border border-beige rounded-2xl p-5 shadow-sm space-y-3">
         <p className="text-xs font-semibold text-gold uppercase tracking-wider">

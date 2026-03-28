@@ -4,7 +4,7 @@ This folder is **only** the Supabase project: config, SQL migrations, and **Edge
 
 **Full endpoint reference:** [API.md](./API.md)
 
-**Web UI:** Next.js lobby at [../webapp/app/room/page.tsx](../webapp/app/room/page.tsx) (`/room`) — set `NEXT_PUBLIC_SUPABASE_*` in `webapp/.env.local`.
+**Web UI:** Next.js lobby at [../webapp/app/room/page.tsx](../webapp/app/room/page.tsx) (`/room`) — set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `webapp/.env.local` (server-side; see [../webapp/README.md](../webapp/README.md)).
 
 **Shared Deno code** lives in [`_shared/`](./_shared/) (next to `functions/`), **not** inside `functions/`. If a folder sits under `functions/` with a name that doesn’t match `^[A-Za-z][A-Za-z0-9_-]*$` (e.g. `_shared`), `supabase functions deploy` fails with “Invalid Function name”.
 

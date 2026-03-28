@@ -163,7 +163,7 @@ function MockStory() {
 
 function MockNotification() {
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-4 w-72">
+    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-5 w-80">
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-100">
         <div className="w-5 h-5 rounded-md bg-gradient-to-br from-pink to-rose flex items-center justify-center">
           <span className="text-[8px] text-white font-bold">S</span>
@@ -215,153 +215,50 @@ export default function LandingPage() {
 
       {/* Nav */}
       <motion.nav
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto relative z-10"
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-40 backdrop-blur-md bg-cream/80 border-b border-beige/30"
       >
-        <span className="text-lg font-bold tracking-tight text-zinc-900">
-          shame<span className="text-rose">.ai</span>
-        </span>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-zinc-400 hover:text-zinc-900 transition-colors">
-            Log in
+        <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
+          <Link href="/" className="text-base font-bold tracking-tight text-zinc-900">
+            shame<span className="text-rose">.ai</span>
           </Link>
-<<<<<<< Updated upstream
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              href="/room"
-              className="text-sm font-semibold px-5 py-2.5 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block"
-            >
-              Group room
-=======
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-            <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-full hover:bg-zinc-800 transition-colors inline-block">
-              Get started
->>>>>>> Stashed changes
+          <div className="flex items-center gap-2">
+            <Link href="#rituals" className="text-xs font-medium text-zinc-900 hover:text-rose transition-colors px-3 py-1.5 rounded-full hover:bg-rose/5">
+              Features
             </Link>
-          </motion.div>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block ml-1">
+                Get started
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </motion.nav>
 
       {/* Hero */}
-<<<<<<< Updated upstream
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Left */}
-          <div className="lg:col-span-7">
-            <motion.p
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-sm font-semibold text-rose tracking-wide uppercase mb-4"
-            >
-              For friend groups with no boundaries
-            </motion.p>
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-zinc-900 leading-[1.05]"
-            >
-              The AI that<br />
-              humiliates your<br />
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.6, type: "spring", stiffness: 200, damping: 15 }}
-                className="text-rose inline-block"
-              >
-                friends for you
-              </motion.span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="mt-6 text-lg text-zinc-500 max-w-lg leading-relaxed"
-            >
-              Three roulette spins. One picks the victim. One picks the
-              ritual. One picks the target. All connected to Instagram.
-              No mercy.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="mt-8 flex items-center gap-4"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-7 py-3.5 bg-pink text-white font-semibold rounded-full hover:bg-rose transition-colors text-sm"
-                >
-                  Start shaming
-                  <motion.span
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    aria-hidden="true"
-                  >
-                    &rarr;
-                  </motion.span>
-                </Link>
-              </motion.div>
-              <Link
-                href="/room"
-                className="text-xs font-medium text-rose hover:underline"
-              >
-                Play with friends →
-              </Link>
-              <span className="text-xs text-zinc-400">Free. No cap. Literally.</span>
-            </motion.div>
-          </div>
-
-          {/* Right — ritual preview card */}
-=======
       <section className="max-w-5xl mx-auto px-6 pt-14 pb-16 relative z-10">
         <div className="flex flex-col items-center text-center">
->>>>>>> Stashed changes
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2 border border-beige/60 rounded-full px-4 py-1.5 mb-5"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-1.5 h-1.5 rounded-full bg-rose"
-            />
-            <span className="text-xs font-medium text-zinc-500">For friend groups with no boundaries</span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-4xl sm:text-6xl lg:text-[4.5rem] font-extrabold tracking-tighter text-zinc-900 leading-[1.02] max-w-3xl"
-          >
-            The AI that{" "}
-            <motion.em
-              initial={{ opacity: 0, rotate: -3 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              transition={{ duration: 0.6, delay: 0.5, type: "spring", stiffness: 150, damping: 12 }}
-              className="font-cursive font-normal italic text-rose not-italic"
-              style={{ fontStyle: "italic" }}
+          <div className="overflow-hidden">
+            <motion.h1
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.15, type: "spring", stiffness: 80, damping: 16 }}
+              className="text-4xl sm:text-6xl lg:text-[4.5rem] font-extrabold tracking-tighter text-zinc-900 leading-[1.02] max-w-3xl"
             >
-              humiliates
-            </motion.em>{" "}
-            your friends
-          </motion.h1>
+              The AI that <em className="font-cursive font-normal italic text-rose">humiliates</em> your friends
+            </motion.h1>
+          </div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-4 text-base text-zinc-400 max-w-md leading-relaxed"
+            className="mt-4 text-base text-zinc-600 max-w-md leading-relaxed"
           >
             Three spins. One picks the victim, one picks the{" "}
-            <span className="font-cursive italic text-zinc-500">ritual</span>,
+            <span className="font-cursive italic text-rose">ritual</span>,
             one picks the target. All real Instagram actions.
           </motion.p>
 
@@ -397,32 +294,43 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Mockup cards — staggered heights */}
-        <div className="mt-12 flex items-end justify-center gap-5 overflow-hidden">
+        {/* Mockup cards — centred row, scaled up */}
+        <div className="mt-10 flex items-end justify-center gap-6 px-4">
           <motion.div
             initial={{ opacity: 0, y: 60, rotate: -2 }}
-            animate={{ opacity: 1, y: 0, rotate: -2 }}
-            transition={{ duration: 0.9, delay: 0.7, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden sm:block mb-8"
+            animate={{ opacity: 1, y: [0, -6, 0], rotate: -2 }}
+            transition={{
+              opacity: { duration: 0.6, delay: 0.6 },
+              y: { duration: 4, delay: 1.5, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 0.9, delay: 0.6 },
+            }}
+            whileHover={{ rotate: 0, y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden sm:block mb-6 scale-105 origin-bottom"
           >
             <MockNotification />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 70 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.9, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0"
+            animate={{ opacity: 1, y: [0, -8, 0] }}
+            transition={{
+              opacity: { duration: 0.6, delay: 0.8 },
+              y: { duration: 5, delay: 2, repeat: Infinity, ease: "easeInOut" },
+            }}
+            whileHover={{ y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 scale-105 origin-bottom"
           >
             <MockDM />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 60, rotate: 2 }}
-            animate={{ opacity: 1, y: 0, rotate: 2 }}
-            transition={{ duration: 0.9, delay: 1.1, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden md:block mb-12"
+            animate={{ opacity: 1, y: [0, -5, 0], rotate: 2 }}
+            transition={{
+              opacity: { duration: 0.6, delay: 1.0 },
+              y: { duration: 3.5, delay: 1.8, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 0.9, delay: 1.0 },
+            }}
+            whileHover={{ rotate: 0, y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden md:block mb-10 scale-105 origin-bottom"
           >
             <MockStory />
           </motion.div>
@@ -447,133 +355,143 @@ export default function LandingPage() {
               <span className="font-cursive italic font-normal text-rose">ruin</span>{" "}
               friendships
             </h2>
-            <p className="text-sm text-zinc-400 mt-3 leading-relaxed">
+            <p className="text-sm text-zinc-600 mt-3 leading-relaxed">
               Every ritual is a real Instagram action. Not hypothetical.
             </p>
           </motion.div>
 
           {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-            {/* DM confessions — 4 col */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-4 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-4 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col sm:flex-row items-center gap-6 overflow-hidden h-full">
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">DM RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">DM RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Love <span className="font-cursive italic font-normal">confessions</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 leading-relaxed">
                     AI writes a heartfelt confession and DMs it to whoever the wheel picks. Unhinged. Real.
                   </p>
                 </div>
-                <div className="shrink-0 scale-[0.88] origin-center">
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="shrink-0 scale-[0.88] origin-center"
+                >
                   <MockDM />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
-            {/* Story posts — 2 col */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-2 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-2 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col items-center text-center overflow-hidden h-full">
-                <p className="text-[11px] font-semibold text-pink/60 mb-3 tracking-wider">STORY RITUAL</p>
+                <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} viewport={{ once: true }} className="text-[11px] font-semibold text-pink/60 mb-3 tracking-wider">STORY RITUAL</motion.p>
                 <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                   Story <span className="font-cursive italic font-normal">posts</span>
                 </h3>
-                <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+                <p className="text-sm text-zinc-600 leading-relaxed mb-6">
                   Force embarrassing content onto their story.
                 </p>
-                <div className="scale-[0.72] origin-center -mb-24">
+                <motion.div
+                  animate={{ y: [0, -3, 0], rotate: [0, 1, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                  className="scale-[0.72] origin-center -mb-24"
+                >
                   <MockStory />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
-            {/* Reel comments — 3 col */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col sm:flex-row items-center gap-6 overflow-hidden h-full">
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-gold/60 mb-3 tracking-wider">COMMENT RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} viewport={{ once: true }} className="text-[11px] font-semibold text-gold/60 mb-3 tracking-wider">COMMENT RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Reel <span className="font-cursive italic font-normal">comments</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 leading-relaxed">
                     Leave unhinged comments on public reels from their account.
                   </p>
                 </div>
-                <div className="shrink-0 scale-[0.72] origin-center -mb-32 sm:mb-0 sm:-mr-4">
+                <motion.div
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="shrink-0 scale-[0.72] origin-center -mb-32 sm:mb-0 sm:-mr-4"
+                >
                   <MockComment />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
-            {/* Ex interactions — 3 col */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 h-full">
                 <div className="text-center mb-5">
-                  <p className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">CHAOS RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} viewport={{ once: true }} className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">CHAOS RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Ex <span className="font-cursive italic font-normal">interactions</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mx-auto">
+                  <p className="text-sm text-zinc-600 leading-relaxed max-w-xs mx-auto">
                     Like their photos at 3am. Comment something unhinged. Chaos.
                   </p>
                 </div>
                 <div className="max-w-xs mx-auto space-y-1.5">
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> liked a photo</p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:47am</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> commented: &quot;i miss this&quot;</p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:48am</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> followed <span className="font-medium text-zinc-700">@your_ex</span></p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:49am</p>
-                  </div>
+                  {[
+                    { action: "liked a photo", time: "3:47am", delay: 0.3 },
+                    { action: 'commented: "i miss this"', time: "3:48am", delay: 0.4 },
+                    { action: "followed @your_ex", time: "3:49am", delay: 0.5 },
+                  ].map((item, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -15 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ delay: item.delay, duration: 0.4 }}
+                      viewport={{ once: true }}
+                      className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
+                      <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> {item.action}</p>
+                      <p className="text-[10px] text-zinc-300 shrink-0">{item.time}</p>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </motion.div>
 
-            {/* Camera roll + thirst traps — full width with roulette */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-6 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-6 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
@@ -582,7 +500,7 @@ export default function LandingPage() {
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                       Camera roll <span className="font-cursive italic font-normal">roulette</span>
                     </h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-600 leading-relaxed">
                       Grabs a random screenshot and stories it. No preview. Pray it&apos;s not your notes app.
                     </p>
                   </div>
@@ -591,7 +509,7 @@ export default function LandingPage() {
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                       Thirst <span className="font-cursive italic font-normal">traps</span>
                     </h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-600 leading-relaxed">
                       Questionable selfies. Zero context. AI caption. No review process.
                     </p>
                   </div>
@@ -674,7 +592,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
             viewport={{ once: true }}
-            className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto"
+            className="text-sm text-zinc-400 mb-6 max-w-sm mx-auto"
           >
             Connect your Instagram. Add your friends. Let the AI handle the rest.
           </motion.p>

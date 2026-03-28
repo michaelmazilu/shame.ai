@@ -1,37 +1,26 @@
 /**
- * Browser client for shame.ai Supabase Edge Functions (multiplayer server).
- * Uses NEXT_PUBLIC_* env vars (publishable key is expected to be public).
+ * Browser client for shame.ai multiplayer: calls same-origin `/api/mp/*` routes.
+ * Supabase URL + publishable key live server-side only (`SUPABASE_*` in .env.local).
  */
 
-export function getMultiplayerConfig(): { url: string; key: string } | null {
-  const url = (
-    process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-  ).replace(/\/$/, "");
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    ""
-  ).trim();
-  if (!url || !key) return null;
-  return { url, key };
+export async function getMultiplayerServerReady(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/mp/status", { cache: "no-store" });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { ok?: boolean };
+    return data.ok === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function mpFetch<T = unknown>(
   functionName: string,
   body: Record<string, unknown>,
 ): Promise<T> {
-  const cfg = getMultiplayerConfig();
-  if (!cfg) {
-    throw new Error("missing_multiplayer_config");
-  }
-  const reqUrl = `${cfg.url}/functions/v1/${functionName}`;
-  const res = await fetch(reqUrl, {
+  const res = await fetch(`/api/mp/${functionName}`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${cfg.key}`,
-      apikey: cfg.key,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const text = await res.text();
