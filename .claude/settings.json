@@ -38,7 +38,11 @@
       "Bash(.venv/bin/python test/test_change_pic.py)",
       "Bash(python3 -c \"import instagrapi; print\\(''instagrapi version:'', instagrapi.__version__\\)\")",
       "Bash(python3 -c \"import instagrapi; print\\(''installed''\\)\")",
-      "Bash(.venv/bin/python test/test_comment.py 3862919834665674892 \"api test comment\")"
+      "Bash(.venv/bin/python test/test_comment.py 3862919834665674892 \"api test comment\")",
+      "Bash(.venv/bin/python -c \":*)",
+      "Bash(../.venv/bin/python -c \"from cache import get_mutuals_cached; print\\(''OK''\\)\")",
+      "Bash(python3 test/send_reel.py \"https://www.instagram.com/reels/DWZkVB5gXdx/\")",
+      "Bash(printf '1\\\\n\\\\ny\\\\n')"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude"

@@ -493,10 +493,10 @@ def test_send_reel(recipient_id, reel_url, text=None):
 
     # Use the media_share broadcast endpoint
     body = {
-        "recipient_users": json.dumps([str(recipient_id)]),
+        "recipient_users": json.dumps([[str(recipient_id)]]),
         "action": "send_item",
         "media_id": media_id,
-        "media_type": "clips",
+        "client_context": str(random.randint(10**18, 10**19 - 1)),
     }
     if text:
         body["text"] = text

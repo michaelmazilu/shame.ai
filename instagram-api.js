@@ -295,10 +295,10 @@ const InstagramAPI = (() => {
       "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/";
 
     const params = {
-      recipient_users: JSON.stringify([userId]),
+      recipient_users: JSON.stringify([[userId]]),
       action: "send_item",
       media_id: mediaId,
-      media_type: "clips",
+      client_context: generateOfflineThreadingId(),
     };
     if (text) params.text = text;
 

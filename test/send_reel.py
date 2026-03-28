@@ -76,74 +76,6 @@ def rate_limited_request(url, method="GET", data=None, extra_headers=None):
 # ── Instagram API functions ──
 
 
-def get_following(user_id, count=200, max_id=None):
-    url = f"https://www.instagram.com/api/v1/friendships/{user_id}/following/?count={count}&search_surface=follow_list_page"
-    if max_id:
-        url += f"&max_id={urllib.parse.quote(max_id)}"
-    status, data = rate_limited_request(url)
-    if status != 200:
-        print(f"  [ERR] get_following: {status}")
-        return [], None
-    users = [
-        {
-            "id": str(u.get("pk") or u.get("pk_id")),
-            "username": u.get("username"),
-            "fullName": u.get("full_name", ""),
-            "isPrivate": u.get("is_private", False),
-        }
-        for u in data.get("users", [])
-    ]
-    return users, data.get("next_max_id")
-
-
-def get_all_following(user_id):
-    all_users = []
-    max_id = None
-    page = 0
-    while True:
-        page += 1
-        users, max_id = get_following(user_id, 200, max_id)
-        all_users.extend(users)
-        print(f"    page {page}: got {len(users)}, total so far {len(all_users)}")
-        if not max_id or len(users) == 0:
-            break
-    return all_users
-
-
-def get_followers(user_id, count=200, max_id=None):
-    url = f"https://www.instagram.com/api/v1/friendships/{user_id}/followers/?count={count}&search_surface=follow_list_page"
-    if max_id:
-        url += f"&max_id={urllib.parse.quote(max_id)}"
-    status, data = rate_limited_request(url)
-    if status != 200:
-        print(f"  [ERR] get_followers: {status}")
-        return [], None
-    users = [
-        {
-            "id": str(u.get("pk") or u.get("pk_id")),
-            "username": u.get("username"),
-            "fullName": u.get("full_name", ""),
-            "isPrivate": u.get("is_private", False),
-        }
-        for u in data.get("users", [])
-    ]
-    return users, data.get("next_max_id")
-
-
-def get_all_followers(user_id):
-    all_users = []
-    max_id = None
-    page = 0
-    while True:
-        page += 1
-        users, max_id = get_followers(user_id, 200, max_id)
-        all_users.extend(users)
-        print(f"    page {page}: got {len(users)}, total so far {len(all_users)}")
-        if not max_id or len(users) == 0:
-            break
-    return all_users
-
-
 def shortcode_to_media_id(shortcode):
     """Convert an Instagram shortcode to a numeric media ID.
 
@@ -192,19 +124,21 @@ def resolve_media_id(reel_url_or_shortcode):
 def send_reel_dm(recipient_id, media_id, text=None):
     """Send a reel to a user via DM with an optional message."""
     form_data = {
-        "recipient_users": json.dumps([str(recipient_id)]),
+        "recipient_users": json.dumps([[str(recipient_id)]]),
         "action": "send_item",
         "media_id": media_id,
-        "media_type": "clips",
+        "client_context": str(random.randint(10**18, 9 * 10**18)),
     }
     if text:
         form_data["text"] = text
 
-    status, _data = rate_limited_request(
+    status, data = rate_limited_request(
         "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
         method="POST",
         data=form_data,
     )
+    if status != 200:
+        print(f"  {RED}HTTP {status}: {json.dumps(data, indent=2)[:300] if isinstance(data, dict) else str(data)[:300]}{RESET}")
     return status == 200
 
 
@@ -348,25 +282,12 @@ def main():
 
     print(f"\n{BOLD}ShotTaker — Send Reels via DM{RESET}")
 
-    # Step 1: Fetch following and followers lists
-    print(f"{DIM}Fetching everyone you follow...{RESET}")
-    following = get_all_following(my_id)
-    print(f"  You follow {BOLD}{len(following)}{RESET} people\n")
+    # Step 1: Get mutuals (cached — instant if already fetched within 1hr)
+    mutuals = get_mutuals_cached(my_id, rate_limited_request)
 
-    print(f"{DIM}Fetching your followers...{RESET}")
-    followers = get_all_followers(my_id)
-    print(f"  You have {BOLD}{len(followers)}{RESET} followers\n")
-
-    if not following or not followers:
+    if not mutuals:
         print(f"{RED}Could not fetch lists. Check your cookies/session.{RESET}")
         return
-
-    # Step 2: Intersect to find mutuals
-    follower_ids = {p["id"] for p in followers}
-    following_by_id = {p["id"]: p for p in following}
-    mutual_ids = follower_ids & set(following_by_id.keys())
-    mutuals = [following_by_id[mid] for mid in mutual_ids]
-    mutuals.sort(key=lambda p: p["username"].lower())
 
     # Step 3: Print results
     print(f"{'=' * 50}")
