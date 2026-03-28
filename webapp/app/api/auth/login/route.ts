@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loginToInstagram } from "@/lib/instagram";
+import { hydrateInstagramUsername, loginToInstagram } from "@/lib/instagram";
 import { getSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
@@ -31,11 +31,12 @@ export async function POST(req: NextRequest) {
 
   const session = await getSession();
   session.ig = result.session;
+  await hydrateInstagramUsername(result.session);
   await session.save();
 
   return NextResponse.json({
     success: true,
     userId: result.session.userId,
-    username: result.session.username,
+    username: result.session.username?.trim() || result.session.userId,
   });
 }

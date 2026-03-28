@@ -1,5 +1,6 @@
 import { getIronSession, IronSession } from "iron-session";
 import { cookies } from "next/headers";
+import { hydrateInstagramUsername } from "./instagram";
 import type { IGSession } from "./types";
 
 export interface SessionData {
@@ -24,5 +25,21 @@ export async function getSession(): Promise<IronSession<SessionData>> {
 
 export async function getIGSession(): Promise<IGSession | null> {
   const session = await getSession();
+  return session.ig || null;
+}
+
+/**
+ * IG session valid for API use (cookies + userId). Hydrates username when missing
+ * and persists to iron-session (fixes browser login showing “logged out” on /app Group).
+ */
+export async function getIGSessionResolved(): Promise<IGSession | null> {
+  const session = await getSession();
+  const ig = session.ig;
+  if (!ig?.cookies || !ig?.userId) return null;
+  if (!ig.username?.trim()) {
+    await hydrateInstagramUsername(ig);
+    session.ig = ig;
+    await session.save();
+  }
   return session.ig || null;
 }

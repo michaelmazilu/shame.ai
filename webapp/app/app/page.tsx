@@ -3,17 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
-import type { IGProfile } from "@/lib/types";
 import Roulette from "@/components/Roulette";
-import GroupSetup from "@/components/GroupSetup";
+import GroupRoomPanel from "@/components/GroupRoomPanel";
 
-type AppStep = "pick-mode" | "group-setup" | "playing";
+type AppStep = "pick-mode" | "group-room" | "playing";
 type GameMode = "solo" | "group";
 
 export default function AppPage() {
   const [step, setStep] = useState<AppStep>("pick-mode");
   const [mode, setMode] = useState<GameMode>("solo");
-  const [groupMembers, setGroupMembers] = useState<IGProfile[]>([]);
 
   function startSolo() {
     setMode("solo");
@@ -22,17 +20,11 @@ export default function AppPage() {
 
   function startGroup() {
     setMode("group");
-    setStep("group-setup");
-  }
-
-  function onGroupReady(members: IGProfile[]) {
-    setGroupMembers(members);
-    setStep("playing");
+    setStep("group-room");
   }
 
   function backToMenu() {
     setStep("pick-mode");
-    setGroupMembers([]);
   }
 
   return (
@@ -64,7 +56,7 @@ export default function AppPage() {
         <div className="flex items-center gap-2">
           {step !== "pick-mode" && (
             <span className="text-[10px] uppercase tracking-wider font-bold text-rose bg-rose/10 px-2.5 py-1 rounded-full">
-              {mode === "solo" ? "Solo" : `Group · ${groupMembers.length}`}
+              {mode === "solo" ? "Solo" : "Group room"}
             </span>
           )}
           <Link href="/history" className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full">History</Link>
@@ -142,7 +134,7 @@ export default function AppPage() {
                         Group
                       </p>
                       <p className="text-sm text-zinc-400 mt-0.5">
-                        Add your friends. The wheel picks who gets shamed.
+                        Create or join a room with a code. Synced multiplayer lobby.
                       </p>
                     </div>
                   </div>
@@ -160,16 +152,16 @@ export default function AppPage() {
             </motion.div>
           )}
 
-          {step === "group-setup" && (
+          {step === "group-room" && (
             <motion.div
-              key="group-setup"
+              key="group-room"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="flex-1 flex flex-col overflow-hidden"
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
             >
-              <GroupSetup onReady={onGroupReady} />
+              <GroupRoomPanel />
             </motion.div>
           )}
 
@@ -182,7 +174,7 @@ export default function AppPage() {
               transition={{ duration: 0.3 }}
               className="flex-1 flex flex-col overflow-hidden"
             >
-              <Roulette mode={mode} groupMembers={groupMembers} />
+              <Roulette mode="solo" groupMembers={[]} />
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getIGSession } from "@/lib/session";
+import { getIGSessionResolved } from "@/lib/session";
 import MultiplayerLobby from "@/components/MultiplayerLobby";
 
 export default async function RoomPage() {
-  const ig = await getIGSession();
-  if (!ig?.username) {
+  const ig = await getIGSessionResolved();
+  if (!ig?.cookies || !ig?.userId) {
     return (
       <main className="min-h-dvh bg-cream flex items-center justify-center px-4 py-16">
         <div className="max-w-md w-full text-center space-y-6">
@@ -38,9 +38,11 @@ export default async function RoomPage() {
     );
   }
 
+  const igUsername = ig.username?.trim() || ig.userId;
+
   return (
     <main className="min-h-dvh bg-cream">
-      <MultiplayerLobby igUsername={ig.username} />
+      <MultiplayerLobby igUsername={igUsername} />
     </main>
   );
 }

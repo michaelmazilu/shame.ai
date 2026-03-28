@@ -22,7 +22,8 @@ function loadOptionalParentEnvLocal() {
     ) {
       val = val.slice(1, -1);
     }
-    if (process.env[key] === undefined) {
+    // Fill when missing OR empty (webapp/.env.local often has SUPABASE_URL= placeholders)
+    if (!process.env[key]?.trim()) {
       process.env[key] = val;
     }
   }

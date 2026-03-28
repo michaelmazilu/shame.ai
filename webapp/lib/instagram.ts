@@ -449,6 +449,37 @@ export async function checkRelationship(session: IGSession, userId: string) {
   };
 }
 
+/**
+ * Browser login often leaves username empty (accounts/edit scrape fails).
+ * This endpoint fills it so server-side checks (e.g. /room, /api/auth/me) work.
+ */
+export async function hydrateInstagramUsername(session: IGSession): Promise<void> {
+  if (session.username?.trim()) return;
+  try {
+    const resp = await fetch(`${BASE}/api/v1/accounts/current_user/`, {
+      headers: {
+        cookie: session.cookies,
+        "x-csrftoken": session.csrfToken,
+        "x-ig-app-id": APP_ID,
+        "x-requested-with": "XMLHttpRequest",
+        referer: `${BASE}/`,
+        "user-agent": USER_AGENT,
+      },
+      redirect: "manual",
+    });
+    const data = (await resp.json()) as {
+      user?: { username?: string };
+      username?: string;
+    };
+    const u = data?.user?.username ?? data?.username;
+    if (typeof u === "string" && u.trim()) {
+      session.username = u.trim();
+    }
+  } catch {
+    /* non-fatal */
+  }
+}
+
 // ── Auth ──
 
 export async function loginToInstagram(
