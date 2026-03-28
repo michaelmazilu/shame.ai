@@ -2,11 +2,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Multiplayer lobby (`/room`)
 
-The **group room** UI talks **directly** to Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)).
+The **group room** UI calls Next.js **API routes** under `/api/mp/*`, which proxy to Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)). Supabase URL and publishable key stay **server-side** only (not in the browser bundle).
 
 1. Copy `webapp/.env.example` → `webapp/.env.local`
-2. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same values as repo root `.env.local`, with the `NEXT_PUBLIC_` prefix on the key name).
+2. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (same values as repo root `.env.local` if you use `SUPABASE_URL` there; no `NEXT_PUBLIC_` prefix needed).
 3. `npm run dev` → open [http://localhost:3000/room](http://localhost:3000/room)
+
+For production (e.g. Vercel), add the same `SUPABASE_*` variables in the project environment settings.
 
 The Chrome extension in the repo root stays separate; use the web lobby for rooms and the extension for Instagram actions when you wire them later.
 

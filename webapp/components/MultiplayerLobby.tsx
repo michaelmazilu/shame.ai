@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { mpFetch, getMultiplayerConfig } from "@/lib/multiplayer-api";
+import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
 import {
   loadSession,
   saveSession,
@@ -54,8 +54,15 @@ export default function MultiplayerLobby() {
   const [secondName, setSecondName] = useState("Guest2");
 
   useEffect(() => {
-    setReady(!!getMultiplayerConfig());
+    let cancelled = false;
+    (async () => {
+      const ok = await getMultiplayerServerReady();
+      if (!cancelled) setReady(ok);
+    })();
     setSession(loadSession());
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const refreshState = useCallback(async (s: MpSession) => {
@@ -287,18 +294,19 @@ export default function MultiplayerLobby() {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <p className="text-zinc-600 text-sm leading-relaxed">
-          Add Supabase keys to{" "}
+          Add Supabase keys (server-only, not exposed in the browser) to{" "}
           <code className="bg-beige px-1.5 py-0.5 rounded text-xs">
             webapp/.env.local
           </code>
           :
         </p>
         <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
-          {`NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
+          {`SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
         </pre>
         <p className="text-xs text-zinc-400">
-          Copy from repo root <code>.env.local</code> or Supabase → Settings → API.
+          Supabase → Settings → API. Same values as repo root{" "}
+          <code>.env.local</code>, without the <code>NEXT_PUBLIC_</code> prefix.
           Restart <code>npm run dev</code> after saving.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
