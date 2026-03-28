@@ -4,6 +4,26 @@ import { motion } from "motion/react";
 import type { IGProfile } from "@/lib/types";
 import type { Ritual } from "@/lib/rituals";
 
+function proxyPic(url?: string) {
+  if (!url) return undefined;
+  return `/api/img-proxy?url=${encodeURIComponent(url)}`;
+}
+
+function Avatar({ user, size = "sm" }: { user: IGProfile; size?: "sm" | "md" }) {
+  const pic = proxyPic(user.profilePic);
+  const s = size === "md" ? "w-10 h-10" : "w-7 h-7";
+  const text = size === "md" ? "text-sm" : "text-[10px]";
+
+  if (pic) {
+    return <img src={pic} alt="" className={`${s} rounded-full object-cover ring-2 ring-blush/30 shrink-0`} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
+  }
+  return (
+    <div className={`${s} rounded-full bg-blush/30 flex items-center justify-center ${text} font-bold text-rose shrink-0`}>
+      {user.username[0]?.toUpperCase()}
+    </div>
+  );
+}
+
 interface ResultCardProps {
   victim: IGProfile;
   ritual: Ritual;
@@ -17,93 +37,56 @@ interface ResultCardProps {
 }
 
 export default function ResultCard({
-  victim,
-  ritual,
-  target,
-  message,
-  messageLoading,
-  error,
-  onMessageChange,
-  onReroll,
-  onSend,
+  victim, ritual, target, message, messageLoading, error, onMessageChange, onReroll, onSend,
 }: ResultCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.97 }}
+      initial={{ opacity: 0, y: 15, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5, type: "spring", stiffness: 200, damping: 20 }}
-      className="w-full max-w-2xl"
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.4, type: "spring", stiffness: 200, damping: 20 }}
+      className="w-full"
     >
-      {/* Summary row */}
-      <div className="flex items-center justify-center gap-3 mb-5">
-        <div className="flex items-center gap-2 bg-white border border-blush/40 rounded-full px-3 py-1.5">
-          {victim.profilePic ? (
-            <img src={victim.profilePic} alt="" className="w-6 h-6 rounded-full object-cover" draggable={false} />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-blush/40 flex items-center justify-center text-[10px] font-bold text-rose">
-              {victim.username[0]?.toUpperCase()}
-            </div>
-          )}
-          <span className="text-xs font-semibold text-zinc-700">@{victim.username}</span>
+      {/* Summary pills */}
+      <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
+          <Avatar user={victim} size="md" />
+          <span className="text-sm font-semibold text-zinc-800">@{victim.username}</span>
         </div>
-
-        <span className="text-lg">{ritual.emoji}</span>
-
-        <div className="flex items-center gap-2 bg-white border border-blush/40 rounded-full px-3 py-1.5">
-          <span className="text-xs text-zinc-400">→</span>
-          {target.profilePic ? (
-            <img src={target.profilePic} alt="" className="w-6 h-6 rounded-full object-cover" draggable={false} />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-blush/40 flex items-center justify-center text-[10px] font-bold text-rose">
-              {target.username[0]?.toUpperCase()}
-            </div>
-          )}
-          <span className="text-xs font-semibold text-zinc-700">@{target.username}</span>
+        <span className="text-2xl">{ritual.emoji}</span>
+        <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
+          <span className="text-sm text-zinc-400">→</span>
+          <Avatar user={target} size="md" />
+          <span className="text-sm font-semibold text-zinc-800">@{target.username}</span>
         </div>
       </div>
 
-      {/* Message area */}
       {messageLoading ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-8">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-            className="w-6 h-6 border-2 border-blush border-t-rose rounded-full"
-          />
-          <p className="text-sm text-zinc-400 font-medium">Crafting the shame&hellip;</p>
+        <div className="flex flex-col items-center gap-2 py-6">
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="w-6 h-6 border-2 border-blush border-t-rose rounded-full" />
+          <p className="text-sm text-zinc-400">Crafting the shame&hellip;</p>
         </div>
       ) : message ? (
         <div className="space-y-3">
-          <div className="bg-white border border-blush/40 rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="bg-white border border-beige/40 rounded-2xl p-4">
+            <div className="flex items-center gap-1.5 mb-2">
               <div className="w-1.5 h-1.5 rounded-full bg-rose animate-pulse" />
-              <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold">
-                {ritual.name}
-              </span>
+              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-400 font-semibold">{ritual.name}</span>
             </div>
             <textarea
               value={message}
               onChange={(e) => onMessageChange(e.target.value)}
               rows={3}
-              className="w-full bg-cream-light/50 border border-beige/40 rounded-xl px-4 py-3 text-zinc-900 text-sm resize-none focus:outline-none focus:border-rose/50 focus:ring-2 focus:ring-rose/10 transition"
+              className="w-full bg-cream-light/60 border border-beige/30 rounded-xl px-4 py-3 text-zinc-900 text-sm resize-none focus:outline-none focus:border-rose/40 focus:ring-1 focus:ring-rose/10 transition"
             />
           </div>
-          <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onReroll}
-              className="flex-1 py-3 text-sm font-semibold text-zinc-500 bg-white border border-beige/60 rounded-xl hover:border-rose/30 transition-colors"
-            >
-              Reroll message
+          <div className="flex gap-2">
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onReroll}
+              className="flex-1 py-3 text-sm font-semibold text-zinc-500 bg-white border border-beige/40 rounded-xl hover:border-rose/30 transition-colors">
+              Reroll
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onSend}
-              className="flex-1 py-3 text-sm font-bold bg-gradient-to-r from-pink to-rose text-white rounded-xl shadow-lg shadow-rose/20 hover:shadow-rose/30 transition-shadow"
-            >
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onSend}
+              className="flex-1 py-3 text-sm font-bold bg-gradient-to-r from-pink to-rose text-white rounded-xl shadow-lg shadow-rose/15">
               Send the Shame
             </motion.button>
           </div>

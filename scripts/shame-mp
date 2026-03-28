@@ -125,9 +125,16 @@ def need_room(s: dict) -> dict:
     return s
 
 
+def optional_ig_username() -> dict:
+    """Optional MP_IG_USERNAME or IG_USERNAME in .env.local (parity with web lobby)."""
+    ig = (os.environ.get("MP_IG_USERNAME") or os.environ.get("IG_USERNAME") or "").strip()
+    return {"ig_username": ig} if ig else {}
+
+
 def cmd_create(who: str) -> None:
     url, key = get_url_and_key()
-    r = api_post(url, key, "create-room", {"display_name": who})
+    body = {"display_name": who, **optional_ig_username()}
+    r = api_post(url, key, "create-room", body)
     if r.get("error"):
         print(json.dumps(r, indent=2))
         sys.exit(1)
@@ -150,12 +157,12 @@ def cmd_create(who: str) -> None:
 
 def cmd_join(code: str, who: str) -> None:
     url, key = get_url_and_key()
-    r = api_post(
-        url,
-        key,
-        "join-room",
-        {"short_code": code.strip().upper(), "display_name": who},
-    )
+    body = {
+        "short_code": code.strip().upper(),
+        "display_name": who,
+        **optional_ig_username(),
+    }
+    r = api_post(url, key, "join-room", body)
     if r.get("error"):
         print(json.dumps(r, indent=2))
         sys.exit(1)

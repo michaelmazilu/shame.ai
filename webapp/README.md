@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Multiplayer lobby (`/room`)
 
-**`/room` works without Supabase** in **preview mode** (same UI: create/join, rounds, players — local only). For real multiplayer with others, **add Supabase keys** (Dashboard → Settings → API) and run the app from `webapp/`:
+**`/room` requires Instagram login** on shame.ai (same session as solo features) so punishments map to a real IG account. **Supabase keys** are required for synced multiplayer (Dashboard → Settings → API). Run the app from `webapp/`:
 
 ```env
 SUPABASE_URL=
