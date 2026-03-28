@@ -3,3 +3,4 @@
 .claude/
 __pycache__/
 test/session.json
+secrets.js

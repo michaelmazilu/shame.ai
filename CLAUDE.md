@@ -65,7 +65,7 @@ When adding or changing any feature in the extension (new API endpoint, new data
 **Other files:**
 
 - `interceptor.js` — Injected into IG's page context (not content script world). Monkey-patches `window.fetch` to passively capture API responses via `postMessage` with type `ST_DATA`.
-- `background.js` — Service worker. Manages shot history (capped at 500), handles `ST_SHOT_SENT`, `ST_GET_HISTORY`, `ST_RESET` messages.
+- `background.js` — Service worker. Manages shot history (capped at 500), pending follow-backs (48h timeout, polled every 5min via `chrome.alarms`), DM retries (max 3 attempts), and Azure OpenAI message generation. Delegates API calls back to the Instagram tab via messaging.
 - `popup.html` / `popup.js` — Extension popup for settings (DM template, rate limit, profile sources) and shot history display.
 - `styles.css` — All swipe UI styling.
 
@@ -89,10 +89,13 @@ All inter-component communication uses `chrome.runtime.sendMessage` or `window.p
 - `ST_SETTINGS_UPDATE` / `ST_TOGGLE` — popup → content script
 - `ST_GET_STATUS` — popup → content script
 - `ST_SHOT_SENT` / `ST_GET_HISTORY` / `ST_RESET` — content script ↔ background
+- `ST_ADD_PENDING` / `ST_GET_PENDING` / `ST_CHECK_PENDING` — content script ↔ background (follow-back tracking)
+- `ST_EXEC_CHECK_FOLLOWS` / `ST_EXEC_SEND_DM` / `ST_EXEC_UNFOLLOW` — background → content script (delegated API calls)
+- `ST_GENERATE_MESSAGE` — popup → background (Azure OpenAI message generation)
 
 ### Storage keys (chrome.storage.local)
 
-All prefixed with `st_`: `st_settings`, `st_seen`, `st_shot_history`, `st_dms_hour`, `st_dms_reset`.
+All prefixed with `st_`: `st_settings`, `st_seen`, `st_shot_history`, `st_dms_hour`, `st_dms_reset`, `st_pending_follows`.
 
 ### Rate limiting
 
