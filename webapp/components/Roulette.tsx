@@ -22,9 +22,15 @@ function saveToStorage(key: string, value: unknown) {
 
 type Phase = "idle" | "spinning" | "result" | "sending" | "sent";
 
-export default function Roulette() {
-  const [profiles, setProfiles] = useState<IGProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RouletteProps {
+  mode: "solo" | "group";
+  groupMembers: IGProfile[];
+}
+
+export default function Roulette({ mode, groupMembers }: RouletteProps) {
+  const isSolo = mode === "solo";
+
+  const [selfProfile, setSelfProfile] = useState<IGProfile | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
 
   const [displayedUser, setDisplayedUser] = useState<IGProfile | null>(null);
@@ -41,35 +47,21 @@ export default function Roulette() {
   const spinCount = useRef(0);
   const [tick, setTick] = useState(0);
 
+  // In solo mode, build a profile from localStorage (set during login)
   useEffect(() => {
-    async function fetchProfiles() {
-      setLoading(true);
-      const seen = loadFromStorage<string[]>("st_seen", []);
-      try {
-        const resp = await fetch("/api/profiles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seen, sources: { suggested: true, explore: true, friendsOfFriends: true } }),
-        });
-        if (resp.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-        const data = await resp.json();
-        if (data.profiles?.length) {
-          setProfiles(data.profiles);
-        }
-      } catch {
-        setError("Failed to load profiles");
-      } finally {
-        setLoading(false);
-      }
+    if (isSolo) {
+      const username = localStorage.getItem("st_username") || "you";
+      const userId = localStorage.getItem("st_userId") || "self";
+      setSelfProfile({ id: userId, username, fullName: "You" });
     }
-    fetchProfiles();
-  }, []);
+  }, [isSolo]);
+
+  const victims = isSolo
+    ? (selfProfile ? [selfProfile] : [])
+    : groupMembers;
 
   const spin = useCallback(() => {
-    if (profiles.length === 0) return;
+    if (victims.length === 0) return;
     setPhase("spinning");
     setMessage("");
     setError("");
@@ -78,17 +70,25 @@ export default function Roulette() {
     setTick(0);
 
     const totalTicks = 20 + Math.floor(Math.random() * 10);
-    const chosenUser = profiles[Math.floor(Math.random() * profiles.length)];
+    const chosenUser = isSolo
+      ? victims[0]
+      : victims[Math.floor(Math.random() * victims.length)];
     const chosenRitual = RITUALS[Math.floor(Math.random() * RITUALS.length)];
 
     setFinalUser(chosenUser);
     setFinalRitual(chosenRitual);
 
+    if (isSolo) {
+      setDisplayedUser(chosenUser);
+    }
+
     spinInterval.current = setInterval(() => {
       spinCount.current++;
       setTick((t) => t + 1);
 
-      setDisplayedUser(profiles[Math.floor(Math.random() * profiles.length)]);
+      if (!isSolo) {
+        setDisplayedUser(victims[Math.floor(Math.random() * victims.length)]);
+      }
       setDisplayedRitual(RITUALS[Math.floor(Math.random() * RITUALS.length)]);
 
       if (spinCount.current >= totalTicks) {
@@ -102,7 +102,9 @@ export default function Roulette() {
         spinInterval.current = setInterval(() => {
           spinCount.current++;
           setTick((t) => t + 1);
-          setDisplayedUser(profiles[Math.floor(Math.random() * profiles.length)]);
+          if (!isSolo) {
+            setDisplayedUser(victims[Math.floor(Math.random() * victims.length)]);
+          }
           setDisplayedRitual(RITUALS[Math.floor(Math.random() * RITUALS.length)]);
 
           if (spinCount.current >= totalTicks) {
@@ -115,7 +117,7 @@ export default function Roulette() {
         }, 200);
       }
     }, 80);
-  }, [profiles]);
+  }, [victims, isSolo]);
 
   async function generateMsg(ritual: Ritual, user: IGProfile) {
     setMessageLoading(true);
@@ -144,51 +146,29 @@ export default function Roulette() {
     setStatusText("Delivering the shame...");
 
     try {
-      const seen = loadFromStorage<string[]>("st_seen", []);
-      seen.push(finalUser.id);
-      saveToStorage("st_seen", seen);
-
-      const relResp = await fetch("/api/relationship", {
+      const dmResp = await fetch("/api/dm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: finalUser.id }),
+        body: JSON.stringify({ userId: finalUser.id, text: message }),
       });
-      const rel = await relResp.json();
+      const dm = await dmResp.json();
 
-      if (rel.followedBy) {
-        const dmResp = await fetch("/api/dm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: finalUser.id, text: message }),
-        });
-        const dm = await dmResp.json();
-        if (dm.success) {
-          setStatusText(`Shame delivered to @${finalUser.username}`);
-          const history = loadFromStorage<{ profile: { id: string; username: string }; ritual: string; message: string; timestamp: number }[]>("st_shot_history", []);
-          history.unshift({
-            profile: { id: finalUser.id, username: finalUser.username },
-            ritual: finalRitual?.name || "",
-            message,
-            timestamp: Date.now(),
-          });
-          if (history.length > 500) history.length = 500;
-          saveToStorage("st_shot_history", history);
-        } else {
-          setStatusText("DM failed — they might have restricted messages");
-        }
+      if (dm.success) {
+        setStatusText(`Shame delivered to @${finalUser.username}`);
       } else {
-        const followResp = await fetch("/api/follow", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: finalUser.id, action: "follow" }),
-        });
-        const follow = await followResp.json();
-        if (follow.success) {
-          setStatusText(`Following @${finalUser.username} — shame queued`);
-        } else {
-          setStatusText("Could not follow — try again");
-        }
+        setStatusText("DM failed — they might have restricted messages");
       }
+
+      const history = loadFromStorage<{ profile: { id: string; username: string }; ritual: string; message: string; timestamp: number }[]>("st_shot_history", []);
+      history.unshift({
+        profile: { id: finalUser.id, username: finalUser.username },
+        ritual: finalRitual?.name || "",
+        message,
+        timestamp: Date.now(),
+      });
+      if (history.length > 500) history.length = 500;
+      saveToStorage("st_shot_history", history);
+
       setPhase("sent");
     } catch {
       setStatusText("Something went wrong");
@@ -206,12 +186,9 @@ export default function Roulette() {
     setError("");
     setStatusText("");
     setTick(0);
-    if (finalUser) {
-      setProfiles((prev) => prev.filter((p) => p.id !== finalUser.id));
-    }
   }
 
-  if (loading) {
+  if (victims.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <motion.div
@@ -219,30 +196,7 @@ export default function Roulette() {
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           className="w-10 h-10 border-3 border-blush border-t-rose rounded-full"
         />
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-sm text-zinc-400 font-medium"
-        >
-          Rounding up victims&hellip;
-        </motion.p>
-      </div>
-    );
-  }
-
-  if (profiles.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className="text-5xl"
-        >
-          😶
-        </motion.div>
-        <p className="text-lg font-bold text-zinc-900">No victims found</p>
-        <p className="text-sm text-zinc-400">Log in or wait for more targets.</p>
+        <p className="text-sm text-zinc-400 font-medium">Loading&hellip;</p>
       </div>
     );
   }
@@ -261,14 +215,22 @@ export default function Roulette() {
         className="text-center mb-8"
       >
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900">
-          {isSpinning ? "Choosing fate..." : isLocked ? "Fate has spoken." : "Who gets shamed?"}
+          {isSpinning
+            ? "Choosing fate..."
+            : isLocked
+              ? "Fate has spoken."
+              : isSolo
+                ? "What's your punishment?"
+                : "Who gets shamed?"}
         </h2>
         <p className="text-sm text-zinc-400 mt-1">
           {isSpinning
             ? "No take-backs."
             : isLocked
               ? "Review the damage below."
-              : `${profiles.length} potential victims in the pool`}
+              : isSolo
+                ? "The wheel picks your ritual. You are the victim."
+                : `${victims.length} potential victims in the group`}
         </p>
       </motion.div>
 
@@ -277,66 +239,78 @@ export default function Roulette() {
 
         {/* Victim slot */}
         <motion.div
-          animate={isSpinning ? {
+          animate={isSpinning && !isSolo ? {
             borderColor: ["rgba(227,107,138,0.2)", "rgba(227,107,138,0.8)", "rgba(227,107,138,0.2)"],
             boxShadow: [
               "0 0 0px rgba(227,107,138,0)",
               "0 0 40px rgba(227,107,138,0.25)",
               "0 0 0px rgba(227,107,138,0)",
             ],
-          } : isLocked ? {
+          } : isLocked || isSolo ? {
             borderColor: "rgba(227,107,138,0.6)",
             boxShadow: "0 0 30px rgba(227,107,138,0.15)",
           } : {}}
-          transition={isSpinning ? { duration: 0.8, repeat: Infinity } : { duration: 0.3 }}
+          transition={isSpinning && !isSolo ? { duration: 0.8, repeat: Infinity } : { duration: 0.3 }}
           className="relative rounded-2xl border-2 border-beige/60 bg-white overflow-hidden"
         >
           <div className="px-5 pt-4 pb-1 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-semibold">Victim</span>
-            {isSpinning && (
+            <span className="text-[10px] uppercase tracking-[0.2em] text-zinc-400 font-semibold">
+              {isSolo ? "You" : "Victim"}
+            </span>
+            {isSpinning && !isSolo && (
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
                 className="w-3 h-3 border border-rose/50 border-t-rose rounded-full"
               />
             )}
-            {isLocked && (
+            {(isLocked || isSolo) && (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 className="text-[10px] uppercase tracking-wider font-bold text-rose bg-rose/10 px-2 py-0.5 rounded-full"
               >
-                Locked
+                {isSolo ? "Always You" : "Locked"}
               </motion.span>
             )}
           </div>
 
           <div className="px-5 pb-5 pt-2 min-h-[72px]">
             <AnimatePresence mode="popLayout">
-              {displayedUser ? (
+              {displayedUser || isSolo ? (
                 <motion.div
-                  key={displayedUser.id + tick}
-                  initial={{ y: 20, opacity: 0, filter: "blur(4px)" }}
+                  key={(isSolo ? "self" : displayedUser?.id || "") + tick}
+                  initial={isSolo ? { opacity: 0 } : { y: 20, opacity: 0, filter: "blur(4px)" }}
                   animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
-                  exit={{ y: -20, opacity: 0, filter: "blur(4px)" }}
-                  transition={{ duration: isSpinning ? 0.06 : 0.3 }}
+                  exit={isSolo ? undefined : { y: -20, opacity: 0, filter: "blur(4px)" }}
+                  transition={{ duration: isSpinning && !isSolo ? 0.06 : 0.3 }}
                   className="flex items-center gap-4"
                 >
                   <div className="relative shrink-0">
-                    {displayedUser.profilePic ? (
+                    {(isSolo ? selfProfile : displayedUser)?.profilePic ? (
                       <img
-                        src={displayedUser.profilePic}
+                        src={(isSolo ? selfProfile : displayedUser)!.profilePic!}
                         alt=""
                         className="w-14 h-14 rounded-full object-cover ring-2 ring-blush/60"
                         draggable={false}
                       />
                     ) : (
                       <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blush to-rose/30 flex items-center justify-center text-xl font-bold text-rose ring-2 ring-blush/60">
-                        {displayedUser.username[0]?.toUpperCase()}
+                        {((isSolo ? selfProfile : displayedUser)?.username?.[0] || "?").toUpperCase()}
                       </div>
                     )}
-                    {isLocked && (
+                    {isSolo && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 400 }}
+                        className="absolute -bottom-1 -right-1 w-5 h-5 bg-rose rounded-full flex items-center justify-center text-white text-[10px]"
+                      >
+                        !
+                      </motion.div>
+                    )}
+                    {isLocked && !isSolo && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -349,10 +323,12 @@ export default function Roulette() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-zinc-900 truncate text-lg leading-tight">
-                      @{displayedUser.username}
+                      @{(isSolo ? selfProfile : displayedUser)?.username}
                     </p>
-                    {displayedUser.fullName && (
-                      <p className="text-xs text-zinc-400 truncate mt-0.5">{displayedUser.fullName}</p>
+                    {(isSolo ? selfProfile : displayedUser)?.fullName && (
+                      <p className="text-xs text-zinc-400 truncate mt-0.5">
+                        {(isSolo ? selfProfile : displayedUser)!.fullName}
+                      </p>
                     )}
                   </div>
                 </motion.div>

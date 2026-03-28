@@ -1,9 +1,15 @@
-import { chromium } from "playwright";
 import type { IGSession } from "./types";
 
 const LOGIN_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes to complete login
 
 export async function launchInstagramLogin(): Promise<{ success: boolean; session?: IGSession; error?: string }> {
+  let chromium;
+  try {
+    chromium = (await import("playwright")).chromium;
+  } catch {
+    return { success: false, error: "Browser login is only available when running locally" };
+  }
+
   const browser = await chromium.launch({
     headless: false,
     args: ["--disable-blink-features=AutomationControlled"],

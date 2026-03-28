@@ -91,9 +91,6 @@ function VerticalReel({ label, icon, spinning, locked, totalTicks, items, select
           background: "linear-gradient(to bottom, white 0%, transparent 20%, transparent 80%, white 100%)",
         }} />
 
-        {/* Centre highlight line */}
-        <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-rose/20 to-transparent z-10 pointer-events-none" />
-
         {/* Content area */}
         <div className="flex-1 flex items-center justify-center relative z-0 px-4">
           <AnimatePresence mode="popLayout">
@@ -116,7 +113,7 @@ function VerticalReel({ label, icon, spinning, locked, totalTicks, items, select
                   </div>
                 )}
                 <p className={cn("font-bold text-lg sm:text-xl truncate max-w-full leading-tight transition-colors", locked ? "text-rose" : "text-zinc-900")}>{item.primary}</p>
-                {item.secondary && <p className="text-xs text-zinc-400 truncate max-w-full mt-1 leading-tight">{item.secondary}</p>}
+                {item.secondary && <p className="text-xs text-zinc-400 max-w-full mt-1 leading-snug line-clamp-2">{item.secondary}</p>}
               </motion.div>
             ) : (
               <motion.div key="ph" initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="flex flex-col items-center">
@@ -343,7 +340,7 @@ export default function Roulette() {
 
       <div className="flex-1 flex flex-col items-center px-6 sm:px-10 py-2 overflow-y-auto">
         {/* Title */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-2 w-full">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-1 w-full">
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-zinc-900">
             {isSpinning ? (
               <span className="font-cursive italic text-rose">Choosing fate...</span>
@@ -357,6 +354,19 @@ export default function Roulette() {
               <span>Wheel of <span className="font-cursive italic text-rose">Shame</span></span>
             )}
           </h2>
+          <p className="text-sm sm:text-base text-zinc-900 mt-1.5 max-w-lg mx-auto leading-relaxed">
+            {isSpinning ? (
+              <span>The wheel is spinning. <span className="text-rose font-semibold">No take-backs</span>.</span>
+            ) : state.phase === "locked" ? (
+              <span>All three wheels are <span className="text-rose font-semibold">locking in</span>...</span>
+            ) : state.phase === "result" || state.phase === "sending" ? (
+              <span>Review the <span className="text-rose font-semibold">ritual</span> and <span className="text-rose font-semibold">send the shame</span> below.</span>
+            ) : state.phase === "sent" ? (
+              <span>The deed is done. <span className="text-rose font-semibold">Spin again</span> for more chaos.</span>
+            ) : (
+              <span>Spin to pick a <span className="text-rose font-semibold">victim</span>, a <span className="text-rose font-semibold">ritual</span>, and a <span className="text-rose font-semibold">target</span>. Pull the lever or hit the button.</span>
+            )}
+          </p>
         </motion.div>
 
         <StatsBar victimCount={state.profiles.length} ritualCount={RITUALS.length} />
