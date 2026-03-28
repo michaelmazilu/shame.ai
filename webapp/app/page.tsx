@@ -163,7 +163,7 @@ function MockStory() {
 
 function MockNotification() {
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-4 w-72">
+    <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-[0_8px_30px_-12px_rgba(227,107,138,0.12)] p-5 w-full">
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-zinc-100">
         <div className="w-5 h-5 rounded-md bg-gradient-to-br from-pink to-rose flex items-center justify-center">
           <span className="text-[8px] text-white font-bold">S</span>
@@ -215,43 +215,34 @@ export default function LandingPage() {
 
       {/* Nav */}
       <motion.nav
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto relative z-10"
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-40 backdrop-blur-md bg-cream/80 border-b border-beige/30"
       >
-        <span className="text-lg font-bold tracking-tight text-zinc-900">
-          shame<span className="text-rose">.ai</span>
-        </span>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-zinc-400 hover:text-zinc-900 transition-colors">
-            Log in
+        <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
+          <Link href="/" className="text-base font-bold tracking-tight text-zinc-900">
+            shame<span className="text-rose">.ai</span>
           </Link>
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-            <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-full hover:bg-zinc-800 transition-colors inline-block">
-              Get started
+          <div className="flex items-center gap-2">
+            <Link href="#rituals" className="text-xs font-medium text-zinc-900 hover:text-rose transition-colors px-3 py-1.5 rounded-full hover:bg-rose/5">
+              Features
             </Link>
-          </motion.div>
+            <Link href="/login" className="text-xs font-medium text-zinc-900 hover:text-rose transition-colors px-3 py-1.5 rounded-full hover:bg-rose/5">
+              Log in
+            </Link>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block ml-1">
+                Get started
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </motion.nav>
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-14 pb-16 relative z-10">
         <div className="flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="inline-flex items-center gap-2 border border-beige/60 rounded-full px-4 py-1.5 mb-5"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-1.5 h-1.5 rounded-full bg-rose"
-            />
-            <span className="text-xs font-medium text-zinc-500">For friend groups with no boundaries</span>
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -275,10 +266,10 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-4 text-base text-zinc-400 max-w-md leading-relaxed"
+            className="mt-4 text-base text-zinc-600 max-w-md leading-relaxed"
           >
             Three spins. One picks the victim, one picks the{" "}
-            <span className="font-cursive italic text-zinc-500">ritual</span>,
+            <span className="font-cursive italic text-rose">ritual</span>,
             one picks the target. All real Instagram actions.
           </motion.p>
 
@@ -314,36 +305,18 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Mockup cards */}
-        <div className="mt-12 flex items-end justify-center gap-5 overflow-hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 60, rotate: -2 }}
-            animate={{ opacity: 1, y: 0, rotate: -2 }}
-            transition={{ duration: 0.9, delay: 0.7, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden sm:block mb-8"
-          >
+        {/* Hero mockup — single centred card */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6, type: "spring", stiffness: 80, damping: 18 }}
+          whileHover={{ y: -4, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+          className="mt-10 flex justify-center"
+        >
+          <div className="w-full max-w-sm">
             <MockNotification />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 70 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.9, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0"
-          >
-            <MockDM />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 60, rotate: 2 }}
-            animate={{ opacity: 1, y: 0, rotate: 2 }}
-            transition={{ duration: 0.9, delay: 1.1, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden md:block mb-12"
-          >
-            <MockStory />
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Testimonials */}
@@ -364,7 +337,7 @@ export default function LandingPage() {
               <span className="font-cursive italic font-normal text-rose">ruin</span>{" "}
               friendships
             </h2>
-            <p className="text-sm text-zinc-400 mt-3 leading-relaxed">
+            <p className="text-sm text-zinc-600 mt-3 leading-relaxed">
               Every ritual is a real Instagram action. Not hypothetical.
             </p>
           </motion.div>
@@ -385,7 +358,7 @@ export default function LandingPage() {
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Love <span className="font-cursive italic font-normal">confessions</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 leading-relaxed">
                     AI writes a heartfelt confession and DMs it to whoever the wheel picks. Unhinged. Real.
                   </p>
                 </div>
@@ -408,7 +381,7 @@ export default function LandingPage() {
                 <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                   Story <span className="font-cursive italic font-normal">posts</span>
                 </h3>
-                <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+                <p className="text-sm text-zinc-600 leading-relaxed mb-6">
                   Force embarrassing content onto their story.
                 </p>
                 <div className="scale-[0.72] origin-center -mb-24">
@@ -431,7 +404,7 @@ export default function LandingPage() {
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Reel <span className="font-cursive italic font-normal">comments</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 leading-relaxed">
                     Leave unhinged comments on public reels from their account.
                   </p>
                 </div>
@@ -455,24 +428,24 @@ export default function LandingPage() {
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Ex <span className="font-cursive italic font-normal">interactions</span>
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mx-auto">
+                  <p className="text-sm text-zinc-600 leading-relaxed max-w-xs mx-auto">
                     Like their photos at 3am. Comment something unhinged. Chaos.
                   </p>
                 </div>
                 <div className="max-w-xs mx-auto space-y-1.5">
                   <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> liked a photo</p>
+                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> liked a photo</p>
                     <p className="text-[10px] text-zinc-300 shrink-0">3:47am</p>
                   </div>
                   <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> commented: &quot;i miss this&quot;</p>
+                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> commented: &quot;i miss this&quot;</p>
                     <p className="text-[10px] text-zinc-300 shrink-0">3:48am</p>
                   </div>
                   <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-500 flex-1"><span className="font-medium text-zinc-700">your_account</span> followed <span className="font-medium text-zinc-700">@your_ex</span></p>
+                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> followed <span className="font-medium text-zinc-700">@your_ex</span></p>
                     <p className="text-[10px] text-zinc-300 shrink-0">3:49am</p>
                   </div>
                 </div>
@@ -494,7 +467,7 @@ export default function LandingPage() {
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                       Camera roll <span className="font-cursive italic font-normal">roulette</span>
                     </h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-600 leading-relaxed">
                       Grabs a random screenshot and stories it. No preview. Pray it&apos;s not your notes app.
                     </p>
                   </div>
@@ -503,7 +476,7 @@ export default function LandingPage() {
                     <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                       Thirst <span className="font-cursive italic font-normal">traps</span>
                     </h3>
-                    <p className="text-sm text-zinc-400 leading-relaxed">
+                    <p className="text-sm text-zinc-600 leading-relaxed">
                       Questionable selfies. Zero context. AI caption. No review process.
                     </p>
                   </div>
@@ -586,7 +559,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
             viewport={{ once: true }}
-            className="text-sm text-zinc-500 mb-6 max-w-sm mx-auto"
+            className="text-sm text-zinc-400 mb-6 max-w-sm mx-auto"
           >
             Connect your Instagram. Add your friends. Let the AI handle the rest.
           </motion.p>

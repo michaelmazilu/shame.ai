@@ -111,18 +111,13 @@ export default function Testimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           viewport={{ once: true }}
-          className="flex flex-col items-center justify-center max-w-[540px] mx-auto px-6"
+          className="flex flex-col items-center text-center max-w-[540px] mx-auto px-6"
         >
-          <div className="flex justify-center">
-            <div className="border border-beige py-1 px-4 rounded-lg text-sm text-zinc-500">
-              Real victims
-            </div>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-3 text-zinc-900">
-            Three spins. Zero dignity.
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter text-zinc-900">
+            Three spins. Zero{" "}
+            <span className="font-cursive italic font-normal text-rose">dignity</span>.
           </h2>
-          <p className="text-center mt-2 text-zinc-500">
+          <p className="mt-2 text-sm text-zinc-600">
             Hear from people who&apos;ve survived the wheel.
           </p>
         </motion.div>
