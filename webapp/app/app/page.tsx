@@ -22,10 +22,10 @@ export default function AppPage() {
         <Link href="/" className="text-sm font-bold tracking-tight text-zinc-900">
           shame<span className="text-rose">.ai</span>
         </Link>
-        <div className="flex items-center gap-1">
-          <Link href="/history" className="text-[11px] font-medium text-zinc-400 hover:text-zinc-900 transition-colors px-2.5 py-1 rounded-full hover:bg-rose/5">History</Link>
-          <Link href="/settings" className="text-[11px] font-medium text-zinc-400 hover:text-zinc-900 transition-colors px-2.5 py-1 rounded-full hover:bg-rose/5">Settings</Link>
-          <Link href="/room" className="text-[11px] font-medium text-zinc-400 hover:text-zinc-900 transition-colors px-2.5 py-1 rounded-full hover:bg-rose/5">Room</Link>
+        <div className="flex items-center gap-2">
+          <Link href="/history" className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full">History</Link>
+          <Link href="/settings" className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full">Settings</Link>
+          <Link href="/room" className="text-xs font-semibold text-white bg-rose hover:bg-rose-dark transition-colors px-4 py-1.5 rounded-full">Room</Link>
         </div>
       </motion.header>
 

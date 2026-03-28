@@ -60,9 +60,9 @@ function VerticalReel({ label, icon, spinning, locked, totalTicks, items, select
     <div className="flex-1 min-w-0 flex flex-col">
       {/* Header bar */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-base">{icon}</span>
-          <span className="text-[10px] uppercase tracking-[0.15em] text-zinc-500 font-bold">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{icon}</span>
+          <span className="text-xs uppercase tracking-[0.15em] text-zinc-500 font-bold">{label}</span>
         </div>
         {spinning && !locked && (
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.4, repeat: Infinity, ease: "linear" }} className="w-3 h-3 border border-rose/30 border-t-rose rounded-full" />
@@ -95,35 +95,35 @@ function VerticalReel({ label, icon, spinning, locked, totalTicks, items, select
         <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-rose/20 to-transparent z-10 pointer-events-none" />
 
         {/* Content area */}
-        <div className="flex-1 flex items-center justify-center relative z-0 px-3">
+        <div className="flex-1 flex items-center justify-center relative z-0 px-4">
           <AnimatePresence mode="popLayout">
             {item ? (
               <motion.div
                 key={item.id + displayIndex + (locked ? "L" : "")}
-                initial={{ y: 40, opacity: 0, filter: "blur(8px)", scale: 0.9 }}
+                initial={{ y: 50, opacity: 0, filter: "blur(10px)", scale: 0.85 }}
                 animate={{ y: 0, opacity: 1, filter: "blur(0px)", scale: 1 }}
-                exit={{ y: -40, opacity: 0, filter: "blur(8px)", scale: 0.9 }}
+                exit={{ y: -50, opacity: 0, filter: "blur(10px)", scale: 0.85 }}
                 transition={{ duration: spinning && !locked ? 0.04 : 0.4 }}
                 className="flex flex-col items-center text-center w-full"
               >
                 {proxiedPic ? (
-                  <img src={proxiedPic} alt="" className={cn("w-16 h-16 rounded-full object-cover ring-[3px] mb-2 transition-all", locked ? "ring-rose shadow-lg shadow-rose/20" : "ring-blush/30")} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <img src={proxiedPic} alt="" className={cn("w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover ring-4 mb-3 transition-all", locked ? "ring-rose shadow-2xl shadow-rose/30" : "ring-blush/30")} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 ) : item.emoji ? (
-                  <motion.span animate={locked ? { scale: [1, 1.15, 1] } : {}} transition={locked ? { duration: 0.5 } : {}} className="text-5xl mb-2">{item.emoji}</motion.span>
+                  <motion.span animate={locked ? { scale: [1, 1.2, 1] } : {}} transition={locked ? { duration: 0.5 } : {}} className="text-7xl sm:text-8xl mb-3">{item.emoji}</motion.span>
                 ) : (
-                  <div className={cn("w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-2 transition-all", locked ? "bg-rose text-white shadow-lg shadow-rose/20" : "bg-blush/20 text-rose")}>
+                  <div className={cn("w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center text-4xl font-bold mb-3 transition-all", locked ? "bg-rose text-white shadow-2xl shadow-rose/30" : "bg-blush/20 text-rose")}>
                     {item.primary[0]?.toUpperCase()}
                   </div>
                 )}
-                <p className={cn("font-bold text-base truncate max-w-full leading-tight transition-colors", locked ? "text-rose" : "text-zinc-900")}>{item.primary}</p>
-                {item.secondary && <p className="text-[10px] text-zinc-400 truncate max-w-full mt-0.5 leading-tight">{item.secondary}</p>}
+                <p className={cn("font-bold text-lg sm:text-xl truncate max-w-full leading-tight transition-colors", locked ? "text-rose" : "text-zinc-900")}>{item.primary}</p>
+                {item.secondary && <p className="text-xs text-zinc-400 truncate max-w-full mt-1 leading-tight">{item.secondary}</p>}
               </motion.div>
             ) : (
               <motion.div key="ph" initial={{ opacity: 0 }} animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 2, repeat: Infinity }} className="flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-blush/10 flex items-center justify-center mb-2">
-                  <span className="text-2xl text-blush/50">?</span>
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-blush/10 flex items-center justify-center mb-3">
+                  <span className="text-4xl text-blush/50">?</span>
                 </div>
-                <p className="text-zinc-300 font-bold text-base">???</p>
+                <p className="text-zinc-300 font-bold text-xl">???</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -271,13 +271,13 @@ function PlayersSidebar({ players }: { players: RoomPlayer[] }) {
 function StatsBar({ victimCount, ritualCount }: { victimCount: number; ritualCount: number }) {
   return (
     <div className="flex items-center justify-center gap-4 mb-2">
-      <div className="flex items-center gap-1.5 bg-white/60 border border-beige/20 rounded-full px-3 py-1">
-        <div className="w-1.5 h-1.5 rounded-full bg-rose animate-pulse" />
-        <span className="text-[10px] font-medium text-zinc-600">{victimCount} victims</span>
+      <div className="flex items-center gap-2 bg-white/60 border border-beige/20 rounded-full px-4 py-1.5">
+        <div className="w-2 h-2 rounded-full bg-rose animate-pulse" />
+        <span className="text-xs font-medium text-zinc-600">{victimCount} victims</span>
       </div>
-      <div className="flex items-center gap-1.5 bg-white/60 border border-beige/20 rounded-full px-3 py-1">
-        <span className="text-[10px]">💀</span>
-        <span className="text-[10px] font-medium text-zinc-600">{ritualCount} rituals</span>
+      <div className="flex items-center gap-2 bg-white/60 border border-beige/20 rounded-full px-4 py-1.5">
+        <span className="text-sm">💀</span>
+        <span className="text-xs font-medium text-zinc-600">{ritualCount} rituals</span>
       </div>
     </div>
   );
@@ -341,10 +341,10 @@ export default function Roulette() {
     <div className="flex-1 flex overflow-hidden">
       {mpSession && players.length > 0 && <PlayersSidebar players={players} />}
 
-      <div className="flex-1 flex flex-col px-4 py-2 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center px-6 sm:px-10 py-2 overflow-y-auto">
         {/* Title */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-2">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tighter text-zinc-900">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-2 w-full">
+          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-zinc-900">
             {isSpinning ? (
               <span className="font-cursive italic text-rose">Choosing fate...</span>
             ) : state.phase === "locked" ? (
@@ -361,20 +361,23 @@ export default function Roulette() {
 
         <StatsBar victimCount={state.profiles.length} ritualCount={RITUALS.length} />
 
-        {/* === SLOT MACHINE — fills remaining space === */}
-        <div className="flex-1 flex items-stretch gap-3 min-h-0 mb-2">
-          <VerticalReel icon="🎯" label="Victim" spinning={isSpinning} locked={state.victimLocked} totalTicks={18} items={profileItems} selectedIndex={state.selectedVictimIndex} onLocked={state.onVictimLocked} />
-          <VerticalReel icon="💀" label="Ritual" spinning={isSpinning} locked={state.ritualLocked} totalTicks={24} items={ritualItems} selectedIndex={state.selectedRitualIndex} onLocked={state.onRitualLocked} />
-          <VerticalReel icon="📩" label="Target" spinning={isSpinning} locked={state.targetLocked} totalTicks={30} items={profileItems} selectedIndex={state.selectedTargetIndex} onLocked={state.onTargetLocked} />
+        {/* === SLOT MACHINE — centred with lever on the side === */}
+        <div className="flex-1 flex items-stretch min-h-0 mb-2 w-full max-w-4xl relative">
+          {/* Reels — centred */}
+          <div className="flex-1 flex items-stretch gap-4">
+            <VerticalReel icon="🎯" label="Victim" spinning={isSpinning} locked={state.victimLocked} totalTicks={18} items={profileItems} selectedIndex={state.selectedVictimIndex} onLocked={state.onVictimLocked} />
+            <VerticalReel icon="💀" label="Ritual" spinning={isSpinning} locked={state.ritualLocked} totalTicks={24} items={ritualItems} selectedIndex={state.selectedRitualIndex} onLocked={state.onRitualLocked} />
+            <VerticalReel icon="📩" label="Target" spinning={isSpinning} locked={state.targetLocked} totalTicks={30} items={profileItems} selectedIndex={state.selectedTargetIndex} onLocked={state.onTargetLocked} />
+          </div>
 
-          {/* Lever */}
-          <div className="shrink-0 hidden sm:flex w-16">
+          {/* Lever — positioned absolutely to the right so it doesn't shift the reels */}
+          <div className="absolute -right-20 top-0 bottom-0 hidden sm:flex w-16">
             <SlotLever onPull={state.spin} disabled={!canSpin} />
           </div>
         </div>
 
         {/* Button — centred */}
-        <div className="mb-2 max-w-md mx-auto w-full">
+        <div className="mb-2 max-w-2xl mx-auto w-full">
           {state.phase === "idle" && (
             <motion.button
               initial={{ opacity: 0, y: 10 }}
@@ -402,7 +405,7 @@ export default function Roulette() {
         </div>
 
         {/* Result — centred */}
-        <div className="max-w-md mx-auto w-full">
+        <div className="max-w-2xl mx-auto w-full">
           <AnimatePresence>
             {state.phase === "result" && state.victim && state.ritual && state.target && (
               <ResultCard victim={state.victim} ritual={state.ritual} target={state.target} message={state.message} messageLoading={state.messageLoading} error={state.error} onMessageChange={state.setMessage} onReroll={state.rerollMessage} onSend={state.sendMessage} />
