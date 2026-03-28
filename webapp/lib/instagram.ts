@@ -12,8 +12,10 @@ function buildHeaders(session: IGSession): Record<string, string> {
     accept: "*/*",
     "accept-language": "en-US,en;q=0.9",
     "sec-ch-prefers-color-scheme": "dark",
-    "sec-ch-ua": '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
-    "sec-ch-ua-full-version-list": '"Chromium";v="146.0.7680.155", "Not-A.Brand";v="24.0.0.0", "Google Chrome";v="146.0.7680.155"',
+    "sec-ch-ua":
+      '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
+    "sec-ch-ua-full-version-list":
+      '"Chromium";v="146.0.7680.155", "Not-A.Brand";v="24.0.0.0", "Google Chrome";v="146.0.7680.155"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-model": '""',
     "sec-ch-ua-platform": '"macOS"',
@@ -44,7 +46,10 @@ async function igFetch(
 
   const resp = await fetch(url, {
     ...options,
-    headers: { ...buildHeaders(session), ...(options.headers as Record<string, string> || {}) },
+    headers: {
+      ...buildHeaders(session),
+      ...((options.headers as Record<string, string>) || {}),
+    },
   });
 
   if (resp.status === 429) {
@@ -58,7 +63,10 @@ async function igFetch(
 
 // ── Profile ──
 
-export async function getProfileInfo(session: IGSession, username: string): Promise<IGProfile | null> {
+export async function getProfileInfo(
+  session: IGSession,
+  username: string,
+): Promise<IGProfile | null> {
   const url = `${BASE}/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
   const resp = await igFetch(url, session);
   const data = await resp.json();
@@ -120,10 +128,18 @@ export async function getFollowers(
     isPrivate: u.is_private as boolean,
   }));
 
-  return { users, nextMaxId: data.next_max_id || null, hasMore: !!data.next_max_id };
+  return {
+    users,
+    nextMaxId: data.next_max_id || null,
+    hasMore: !!data.next_max_id,
+  };
 }
 
-export async function getAllFollowers(session: IGSession, userId: string, limit = 500): Promise<IGProfile[]> {
+export async function getAllFollowers(
+  session: IGSession,
+  userId: string,
+  limit = 500,
+): Promise<IGProfile[]> {
   const all: IGProfile[] = [];
   let maxId: string | null = null;
 
@@ -156,10 +172,18 @@ export async function getFollowing(
     isPrivate: u.is_private as boolean,
   }));
 
-  return { users, nextMaxId: data.next_max_id || null, hasMore: !!data.next_max_id };
+  return {
+    users,
+    nextMaxId: data.next_max_id || null,
+    hasMore: !!data.next_max_id,
+  };
 }
 
-export async function getAllFollowing(session: IGSession, userId: string, limit = 500): Promise<IGProfile[]> {
+export async function getAllFollowing(
+  session: IGSession,
+  userId: string,
+  limit = 500,
+): Promise<IGProfile[]> {
   const all: IGProfile[] = [];
   let maxId: string | null = null;
 
@@ -175,7 +199,9 @@ export async function getAllFollowing(session: IGSession, userId: string, limit 
 
 // ── Discover ──
 
-export async function getSuggestedUsers(session: IGSession): Promise<IGProfile[]> {
+export async function getSuggestedUsers(
+  session: IGSession,
+): Promise<IGProfile[]> {
   const url = `${BASE}/api/v1/discover/ayml/`;
   const resp = await igFetch(url, session);
   const data = await resp.json();
@@ -184,7 +210,7 @@ export async function getSuggestedUsers(session: IGSession): Promise<IGProfile[]
   const users: IGProfile[] = [];
 
   for (const group of groups) {
-    for (const item of (group.items || [])) {
+    for (const item of group.items || []) {
       const u = item.user;
       if (u) {
         users.push({
@@ -202,7 +228,9 @@ export async function getSuggestedUsers(session: IGSession): Promise<IGProfile[]
   return users;
 }
 
-export async function getExploreProfiles(session: IGSession): Promise<IGProfile[]> {
+export async function getExploreProfiles(
+  session: IGSession,
+): Promise<IGProfile[]> {
   const url = `${BASE}/api/v1/discover/topical_explore/`;
   const resp = await igFetch(url, session);
   const data = await resp.json();
@@ -214,7 +242,10 @@ export async function getExploreProfiles(session: IGSession): Promise<IGProfile[
     const mediaItems = section.layout_content?.medias || [];
     for (const media of mediaItems) {
       const u = media?.media?.user;
-      if (u && !users.find((existing) => existing.id === String(u.pk || u.pk_id))) {
+      if (
+        u &&
+        !users.find((existing) => existing.id === String(u.pk || u.pk_id))
+      ) {
         users.push({
           id: String(u.pk || u.pk_id),
           username: u.username,
@@ -231,20 +262,39 @@ export async function getExploreProfiles(session: IGSession): Promise<IGProfile[
 
 // ── Posts ──
 
-export async function getUserPosts(session: IGSession, userId: string, count = 6): Promise<IGPost[]> {
+export async function getUserPosts(
+  session: IGSession,
+  userId: string,
+  count = 6,
+): Promise<IGPost[]> {
   const url = `${BASE}/api/v1/feed/user/${userId}/?count=${count}`;
   const resp = await igFetch(url, session);
   const data = await resp.json();
 
   return (data.items || []).map((item: Record<string, unknown>) => {
-    const iv2 = item.image_versions2 as { candidates?: { url: string; width: number; height: number }[] } | undefined;
+    const iv2 = item.image_versions2 as
+      | { candidates?: { url: string; width: number; height: number }[] }
+      | undefined;
     const candidates = iv2?.candidates || [];
     const best = candidates[0];
-    const loc = item.location as { name: string; city?: string; lat?: number; lng?: number } | null;
+    const loc = item.location as {
+      name: string;
+      city?: string;
+      lat?: number;
+      lng?: number;
+    } | null;
     const cap = item.caption as { text?: string } | null;
-    const usertags = item.usertags as { in?: { user?: { username: string; pk: string } }[] } | null;
-    const music = item.music_metadata as { music_info?: { music_asset_info?: { title: string; display_artist: string } } } | null;
-    const coauthors = item.coauthor_producers as { username: string; pk: string }[] | null;
+    const usertags = item.usertags as {
+      in?: { user?: { username: string; pk: string } }[];
+    } | null;
+    const music = item.music_metadata as {
+      music_info?: {
+        music_asset_info?: { title: string; display_artist: string };
+      };
+    } | null;
+    const coauthors = item.coauthor_producers as
+      | { username: string; pk: string }[]
+      | null;
 
     return {
       id: String(item.pk),
@@ -257,17 +307,25 @@ export async function getUserPosts(session: IGSession, userId: string, count = 6
       commentCount: (item.comment_count as number) || 0,
       playCount: (item.play_count as number) || 0,
       takenAt: item.taken_at as number,
-      location: loc ? { name: loc.name, city: loc.city, lat: loc.lat, lng: loc.lng } : null,
+      location: loc
+        ? { name: loc.name, city: loc.city, lat: loc.lat, lng: loc.lng }
+        : null,
       usertags: (usertags?.in || []).map((t) => ({
         username: t.user?.username || "",
         id: String(t.user?.pk || ""),
       })),
       musicMetadata: music?.music_info?.music_asset_info
-        ? { title: music.music_info.music_asset_info.title, artist: music.music_info.music_asset_info.display_artist }
+        ? {
+            title: music.music_info.music_asset_info.title,
+            artist: music.music_info.music_asset_info.display_artist,
+          }
         : null,
       isPaidPartnership: (item.is_paid_partnership as boolean) || false,
       productType: (item.product_type as string) || null,
-      coauthors: (coauthors || []).map((c) => ({ username: c.username, id: String(c.pk) })),
+      coauthors: (coauthors || []).map((c) => ({
+        username: c.username,
+        id: String(c.pk),
+      })),
     };
   });
 }
@@ -292,7 +350,11 @@ export async function sendDM(session: IGSession, userId: string, text: string) {
   return { success: resp.ok, data };
 }
 
-export async function sendDMGraphQL(session: IGSession, recipientUserId: string, text: string) {
+export async function sendDMGraphQL(
+  session: IGSession,
+  recipientUserId: string,
+  text: string,
+) {
   if (!session.fbDtsg || !session.lsd) {
     return sendDM(session, recipientUserId, text);
   }
@@ -342,7 +404,10 @@ export async function sendDMGraphQL(session: IGSession, recipientUserId: string,
 
 export async function followUser(session: IGSession, userId: string) {
   const url = `${BASE}/api/v1/friendships/create/${userId}/`;
-  const body = new URLSearchParams({ container_module: "profile", user_id: userId });
+  const body = new URLSearchParams({
+    container_module: "profile",
+    user_id: userId,
+  });
 
   const resp = await igFetch(url, session, {
     method: "POST",
@@ -356,7 +421,10 @@ export async function followUser(session: IGSession, userId: string) {
 
 export async function unfollowUser(session: IGSession, userId: string) {
   const url = `${BASE}/api/v1/friendships/destroy/${userId}/`;
-  const body = new URLSearchParams({ container_module: "profile", user_id: userId });
+  const body = new URLSearchParams({
+    container_module: "profile",
+    user_id: userId,
+  });
 
   const resp = await igFetch(url, session, {
     method: "POST",
@@ -386,7 +454,15 @@ export async function checkRelationship(session: IGSession, userId: string) {
 export async function loginToInstagram(
   username: string,
   password: string,
-): Promise<{ success: boolean; session?: IGSession; twoFactorRequired?: boolean; twoFactorInfo?: Record<string, unknown>; checkpointRequired?: boolean; checkpointInfo?: Record<string, unknown>; error?: string }> {
+): Promise<{
+  success: boolean;
+  session?: IGSession;
+  twoFactorRequired?: boolean;
+  twoFactorInfo?: Record<string, unknown>;
+  checkpointRequired?: boolean;
+  checkpointInfo?: Record<string, unknown>;
+  error?: string;
+}> {
   // Step 1: Get initial CSRF token
   const initResp = await fetch(`${BASE}/accounts/login/`, {
     headers: { "user-agent": USER_AGENT },
@@ -459,7 +535,9 @@ export async function loginToInstagram(
 
   if (loginData.message === "checkpoint_required" || loginData.checkpoint_url) {
     const checkpointUrl = loginData.checkpoint_url as string;
-    const fullCheckpointUrl = checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`;
+    const fullCheckpointUrl = checkpointUrl.startsWith("http")
+      ? checkpointUrl
+      : `${BASE}${checkpointUrl}`;
     const cookieStr = allCookies.map((c) => c.split(";")[0]).join("; ");
 
     // Step 1: GET the checkpoint page to initialize it and get any new cookies
@@ -477,8 +555,15 @@ export async function loginToInstagram(
       allCookies.push(...getCookies);
       getBody = await getResp.text();
       console.log("[Checkpoint] Step 1 GET status:", getResp.status);
-      console.log("[Checkpoint] Step 1 GET body (first 500):", getBody.slice(0, 500));
-      console.log("[Checkpoint] Step 1 GET cookies:", getCookies.length, "new cookies");
+      console.log(
+        "[Checkpoint] Step 1 GET body (first 500):",
+        getBody.slice(0, 500),
+      );
+      console.log(
+        "[Checkpoint] Step 1 GET cookies:",
+        getCookies.length,
+        "new cookies",
+      );
     } catch (e) {
       console.error("[Checkpoint] Step 1 GET failed:", e);
     }
@@ -506,15 +591,26 @@ export async function loginToInstagram(
       const choiceCookies = choiceResp.headers.getSetCookie?.() || [];
       allCookies.push(...choiceCookies);
       const choiceBody = await choiceResp.text();
-      console.log("[Checkpoint] Step 2 POST choice=1 status:", choiceResp.status);
-      console.log("[Checkpoint] Step 2 POST body (first 500):", choiceBody.slice(0, 500));
-      console.log("[Checkpoint] Step 2 POST cookies:", choiceCookies.length, "new cookies");
+      console.log(
+        "[Checkpoint] Step 2 POST choice=1 status:",
+        choiceResp.status,
+      );
+      console.log(
+        "[Checkpoint] Step 2 POST body (first 500):",
+        choiceBody.slice(0, 500),
+      );
+      console.log(
+        "[Checkpoint] Step 2 POST cookies:",
+        choiceCookies.length,
+        "new cookies",
+      );
     } catch (e) {
       console.error("[Checkpoint] Step 2 POST failed:", e);
     }
 
     const finalCookieStr = allCookies.map((c) => c.split(";")[0]).join("; ");
-    const finalCsrfForCheckpoint = finalCookieStr.match(/csrftoken=([^;]+)/)?.[1] || latestCsrf;
+    const finalCsrfForCheckpoint =
+      finalCookieStr.match(/csrftoken=([^;]+)/)?.[1] || latestCsrf;
 
     return {
       success: false,
@@ -529,7 +625,10 @@ export async function loginToInstagram(
   }
 
   if (!loginData.authenticated) {
-    return { success: false, error: loginData.message || "Login failed — check credentials" };
+    return {
+      success: false,
+      error: loginData.message || "Login failed — check credentials",
+    };
   }
 
   // Extract session data from cookies
@@ -539,7 +638,10 @@ export async function loginToInstagram(
   const finalCsrf = finalCookieStr.match(/csrftoken=([^;]+)/)?.[1] || csrfToken;
 
   if (!sessionId || !dsUserId) {
-    return { success: false, error: "Login succeeded but session cookies missing" };
+    return {
+      success: false,
+      error: "Login succeeded but session cookies missing",
+    };
   }
 
   return {
@@ -590,7 +692,10 @@ export async function verifyTwoFactor(
     return { success: false, error: data.message || "Invalid 2FA code" };
   }
 
-  const allCookieParts = [existingCookies, ...newCookies.map((c) => c.split(";")[0])];
+  const allCookieParts = [
+    existingCookies,
+    ...newCookies.map((c) => c.split(";")[0]),
+  ];
   const finalCookieStr = allCookieParts.join("; ");
   const sessionId = finalCookieStr.match(/sessionid=([^;]+)/)?.[1];
   const dsUserId = finalCookieStr.match(/ds_user_id=(\d+)/)?.[1];
@@ -618,7 +723,9 @@ export async function verifyCheckpoint(
   existingCookies: string,
   csrfToken: string,
 ): Promise<{ success: boolean; session?: IGSession; error?: string }> {
-  const fullUrl = checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`;
+  const fullUrl = checkpointUrl.startsWith("http")
+    ? checkpointUrl
+    : `${BASE}${checkpointUrl}`;
 
   const body = new URLSearchParams({
     security_code: code,
@@ -641,7 +748,10 @@ export async function verifyCheckpoint(
   });
 
   const newCookies = resp.headers.getSetCookie?.() || [];
-  const allCookieParts = [existingCookies, ...newCookies.map((c) => c.split(";")[0])];
+  const allCookieParts = [
+    existingCookies,
+    ...newCookies.map((c) => c.split(";")[0]),
+  ];
   const finalCookieStr = allCookieParts.join("; ");
 
   // Check if we got session cookies (meaning the checkpoint passed)
@@ -662,7 +772,9 @@ export async function verifyCheckpoint(
         const redirectUrl = resp.headers.get("location");
         if (redirectUrl) {
           const followResp = await fetch(
-            redirectUrl.startsWith("http") ? redirectUrl : `${BASE}${redirectUrl}`,
+            redirectUrl.startsWith("http")
+              ? redirectUrl
+              : `${BASE}${redirectUrl}`,
             {
               headers: {
                 "user-agent": USER_AGENT,
@@ -672,15 +784,24 @@ export async function verifyCheckpoint(
             },
           );
           const moreCookies = followResp.headers.getSetCookie?.() || [];
-          const fullCookieStr = [finalCookieStr, ...moreCookies.map((c) => c.split(";")[0])].join("; ");
+          const fullCookieStr = [
+            finalCookieStr,
+            ...moreCookies.map((c) => c.split(";")[0]),
+          ].join("; ");
           const sid = fullCookieStr.match(/sessionid=([^;]+)/)?.[1];
           const uid = fullCookieStr.match(/ds_user_id=(\d+)/)?.[1];
-          const csrf = fullCookieStr.match(/csrftoken=([^;]+)/)?.[1] || finalCsrf;
+          const csrf =
+            fullCookieStr.match(/csrftoken=([^;]+)/)?.[1] || finalCsrf;
 
           if (sid && uid) {
             return {
               success: true,
-              session: { cookies: fullCookieStr, csrfToken: csrf, userId: uid, username },
+              session: {
+                cookies: fullCookieStr,
+                csrfToken: csrf,
+                userId: uid,
+                username,
+              },
             };
           }
         }
@@ -700,6 +821,278 @@ export async function verifyCheckpoint(
   };
 }
 
+// ── Reels Discovery ──
+
+export interface ReelInfo {
+  mediaId: string;
+  shortcode: string;
+  videoUrl: string | null;
+  username: string | null;
+  caption: string;
+  viewCount: number;
+  likeCount: number;
+}
+
+export async function getReelsFeed(
+  session: IGSession,
+  amount = 10,
+): Promise<ReelInfo[]> {
+  // Best strategy: fetch feeds from a few public followers and filter for reels (product_type=clips).
+  // The clips/reels_tray endpoint returns stories (not reels) and explore can fail with useragent mismatch.
+  const reels: ReelInfo[] = [];
+
+  try {
+    const { users } = await getFollowers(session, session.userId, 20);
+    const publicUsers = users.filter((u) => !u.isPrivate).slice(0, 5);
+
+    for (const user of publicUsers) {
+      if (reels.length >= amount) break;
+      try {
+        const posts = await getUserPosts(session, user.id, 6);
+        for (const post of posts) {
+          if (
+            post.productType === "clips" ||
+            (post.mediaType === 2 && post.playCount != null)
+          ) {
+            reels.push({
+              mediaId: post.id,
+              shortcode: "",
+              videoUrl: null,
+              username: user.username,
+              caption: post.caption || "",
+              viewCount: post.playCount || 0,
+              likeCount: post.likeCount || 0,
+            });
+          }
+        }
+      } catch {
+        /* skip user on error */
+      }
+    }
+  } catch (e) {
+    console.warn("[Reels] Follower-based reel discovery failed:", e);
+  }
+
+  return reels.slice(0, amount);
+}
+
+export async function getExploreReels(session: IGSession): Promise<ReelInfo[]> {
+  const reels: ReelInfo[] = [];
+
+  // Try explore endpoint first
+  try {
+    const url = `${BASE}/api/v1/discover/topical_explore/?is_prefetch=false&omit_cover_media=true`;
+    const resp = await igFetch(url, session);
+    if (resp.ok) {
+      const data = await resp.json();
+      const items = data?.sectional_items || data?.items || [];
+      for (const section of items) {
+        for (const media of section.layout_content?.medias || []) {
+          const m = media?.media;
+          if (m && m.media_type === 2 && m.video_versions?.length) {
+            reels.push({
+              mediaId: String(m.pk),
+              shortcode: m.code || "",
+              videoUrl: m.video_versions[0]?.url || null,
+              username: m.user?.username || null,
+              caption: m.caption?.text || "",
+              viewCount: m.view_count || 0,
+              likeCount: m.like_count || 0,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    /* ignore explore failures */
+  }
+
+  // If explore returned nothing, fall back to follower feed reels
+  if (!reels.length) {
+    return getReelsFeed(session, 10);
+  }
+
+  return reels;
+}
+
+export async function getMediaInfo(
+  session: IGSession,
+  shortcodeOrId: string,
+): Promise<{
+  mediaId: string;
+  videoUrl: string | null;
+  username: string | null;
+  caption: string;
+} | null> {
+  const isNumeric = /^\d+$/.test(shortcodeOrId);
+
+  // If shortcode, first resolve to media ID
+  let mediaId = shortcodeOrId;
+  if (!isNumeric) {
+    const resolved = await getMediaId(session, shortcodeOrId);
+    if (!resolved) return null;
+    mediaId = resolved;
+  }
+
+  const resp = await igFetch(`${BASE}/api/v1/media/${mediaId}/info/`, session);
+  if (!resp.ok) return null;
+
+  const data = await resp.json();
+  const item = data.items?.[0];
+  if (!item) return null;
+
+  return {
+    mediaId: String(item.pk),
+    videoUrl: item.video_versions?.[0]?.url || null,
+    username: item.user?.username || null,
+    caption: item.caption?.text || "",
+  };
+}
+
+export async function getRandomReel(
+  session: IGSession,
+): Promise<ReelInfo | null> {
+  // Try reels feed first, fall back to explore
+  let reels = await getReelsFeed(session);
+  if (!reels.length) {
+    reels = await getExploreReels(session);
+  }
+  if (!reels.length) return null;
+  return reels[Math.floor(Math.random() * reels.length)];
+}
+
+// ── Story Upload ──
+
+export async function uploadStoryPhoto(
+  session: IGSession,
+  jpegData: ArrayBuffer,
+): Promise<{ success: boolean; mediaId?: string; error?: string }> {
+  // Step 1: Upload photo via rupload (same as regular photo upload)
+  const uploadResult = await uploadPhoto(session, jpegData);
+  if (!uploadResult.success || !uploadResult.uploadId) {
+    return { success: false, error: uploadResult.error || "Upload failed" };
+  }
+
+  // Step 2: Configure as story (not feed post)
+  const configUrl = `${BASE}/api/v1/media/configure_to_story/`;
+  const body = new URLSearchParams({
+    upload_id: uploadResult.uploadId,
+    source_type: "4",
+    configure_mode: "1",
+  });
+
+  const resp = await igFetch(configUrl, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    return { success: false, error: `Story configure failed: ${resp.status}` };
+  }
+
+  return { success: true, mediaId: data.media?.id };
+}
+
+export async function uploadStoryVideo(
+  session: IGSession,
+  videoData: ArrayBuffer,
+): Promise<{ success: boolean; mediaId?: string; error?: string }> {
+  // Step 1: Upload video via rupload_igvideo
+  const uploadId = String(Math.floor(Date.now() / 1000));
+  const entityName = `${uploadId}_0_${Math.floor(Math.random() * 9e9) + 1e9}`;
+
+  const ruploadParams = JSON.stringify({
+    retry_context: JSON.stringify({
+      num_step_auto_retry: 0,
+      num_reupload: 0,
+      num_step_manual_retry: 0,
+    }),
+    media_type: 2,
+    upload_id: uploadId,
+    xsharing_user_ids: "[]",
+    upload_media_duration_ms: "0",
+    upload_media_width: "1080",
+    upload_media_height: "1920",
+  });
+
+  const headers = {
+    ...buildHeaders(session),
+    "x-instagram-rupload-params": ruploadParams,
+    "x-entity-name": entityName,
+    "x-entity-length": String(videoData.byteLength),
+    "x-entity-type": "video/mp4",
+    "content-type": "video/mp4",
+    offset: "0",
+    "sec-fetch-site": "same-site",
+  };
+
+  const uploadResp = await fetch(
+    `https://i.instagram.com/rupload_igvideo/${entityName}`,
+    {
+      method: "POST",
+      headers,
+      body: videoData,
+    },
+  );
+
+  if (!uploadResp.ok) {
+    return {
+      success: false,
+      error: `Video upload failed: ${uploadResp.status}`,
+    };
+  }
+
+  // Step 2: Configure as story
+  const configUrl = `${BASE}/api/v1/media/configure_to_story/`;
+  const body = new URLSearchParams({
+    upload_id: uploadId,
+    source_type: "4",
+    configure_mode: "1",
+  });
+
+  const configResp = await igFetch(configUrl, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await configResp.json();
+  if (!configResp.ok) {
+    return {
+      success: false,
+      error: `Story video configure failed: ${configResp.status}`,
+    };
+  }
+
+  return { success: true, mediaId: data.media?.id };
+}
+
+export async function repostReelToStory(
+  session: IGSession,
+  shortcode: string,
+): Promise<{ success: boolean; mediaId?: string; error?: string }> {
+  // Step 1: Get the reel video URL
+  const info = await getMediaInfo(session, shortcode);
+  if (!info?.videoUrl) {
+    return { success: false, error: "Could not get reel video URL" };
+  }
+
+  // Step 2: Download the video
+  const videoResp = await fetch(info.videoUrl);
+  if (!videoResp.ok) {
+    return {
+      success: false,
+      error: `Video download failed: ${videoResp.status}`,
+    };
+  }
+  const videoData = await videoResp.arrayBuffer();
+
+  // Step 3: Upload as story
+  return uploadStoryVideo(session, videoData);
+}
+
 // ── Profile Pipeline ──
 
 function shuffle<T>(arr: T[]): T[] {
@@ -711,7 +1104,11 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function filterAndDedupe(profiles: IGProfile[], seen: Set<string>, currentUserId: string): IGProfile[] {
+export function filterAndDedupe(
+  profiles: IGProfile[],
+  seen: Set<string>,
+  currentUserId: string,
+): IGProfile[] {
   const unseen = profiles.filter((p) => {
     if (seen.has(p.id)) return false;
     if (p.isPrivate) return false;
@@ -726,7 +1123,11 @@ export function filterAndDedupe(profiles: IGProfile[], seen: Set<string>, curren
   return [...uniqueMap.values()];
 }
 
-export async function enrichProfiles(session: IGSession, profiles: IGProfile[], limit = 20): Promise<IGProfile[]> {
+export async function enrichProfiles(
+  session: IGSession,
+  profiles: IGProfile[],
+  limit = 20,
+): Promise<IGProfile[]> {
   const enriched: IGProfile[] = [];
   for (const p of profiles.slice(0, limit)) {
     try {
@@ -805,7 +1206,11 @@ export async function enrichSingleProfile(
 
 // ── Comments ──
 
-export async function commentOnPost(session: IGSession, mediaId: string, text: string) {
+export async function commentOnPost(
+  session: IGSession,
+  mediaId: string,
+  text: string,
+) {
   const url = `${BASE}/api/v1/web/comments/${mediaId}/add/`;
   const body = new URLSearchParams({ comment_text: text });
 
@@ -821,7 +1226,10 @@ export async function commentOnPost(session: IGSession, mediaId: string, text: s
 
 // ── Media ID Resolution ──
 
-export async function getMediaId(session: IGSession, shortcode: string): Promise<string | null> {
+export async function getMediaId(
+  session: IGSession,
+  shortcode: string,
+): Promise<string | null> {
   const url = `${BASE}/api/v1/media/${shortcode}/media_id/`;
   try {
     const resp = await igFetch(url, session);
@@ -829,7 +1237,9 @@ export async function getMediaId(session: IGSession, shortcode: string): Promise
       const data = await resp.json();
       return data.media_id || null;
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
 
   // Fallback to /info/ endpoint
   try {
@@ -839,7 +1249,9 @@ export async function getMediaId(session: IGSession, shortcode: string): Promise
       const data = await resp.json();
       return data.items?.[0]?.pk ? String(data.items[0].pk) : null;
     }
-  } catch { /* empty */ }
+  } catch {
+    /* empty */
+  }
 
   return null;
 }
@@ -849,7 +1261,12 @@ export async function getMediaId(session: IGSession, shortcode: string): Promise
 export async function checkRelationshipBulk(
   session: IGSession,
   userIds: string[],
-): Promise<Record<string, { followedBy: boolean; following: boolean; outgoingRequest: boolean }>> {
+): Promise<
+  Record<
+    string,
+    { followedBy: boolean; following: boolean; outgoingRequest: boolean }
+  >
+> {
   const url = `${BASE}/api/v1/friendships/show_many/`;
   const body = new URLSearchParams({ user_ids: userIds.join(",") });
 
@@ -861,7 +1278,10 @@ export async function checkRelationshipBulk(
 
   const data = await resp.json();
   const statuses = data.friendship_statuses || {};
-  const result: Record<string, { followedBy: boolean; following: boolean; outgoingRequest: boolean }> = {};
+  const result: Record<
+    string,
+    { followedBy: boolean; following: boolean; outgoingRequest: boolean }
+  > = {};
 
   for (const [id, status] of Object.entries(statuses)) {
     const s = status as Record<string, boolean>;
@@ -911,11 +1331,14 @@ export async function uploadPhoto(
     "sec-fetch-site": "same-site",
   };
 
-  const resp = await fetch(`https://i.instagram.com/rupload_igphoto/${entityName}`, {
-    method: "POST",
-    headers,
-    body: jpegData,
-  });
+  const resp = await fetch(
+    `https://i.instagram.com/rupload_igphoto/${entityName}`,
+    {
+      method: "POST",
+      headers,
+      body: jpegData,
+    },
+  );
 
   if (!resp.ok) {
     return { success: false, error: `Upload failed: ${resp.status}` };
@@ -928,7 +1351,12 @@ export async function publishPost(
   session: IGSession,
   uploadId: string,
   caption: string,
-): Promise<{ success: boolean; mediaId?: string; code?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  mediaId?: string;
+  code?: string;
+  error?: string;
+}> {
   const url = `${BASE}/api/v1/media/configure/`;
   const body = new URLSearchParams({
     upload_id: uploadId,
@@ -969,7 +1397,11 @@ export async function getProfileFormData(
 export async function editProfile(
   session: IGSession,
   fields: Record<string, string>,
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<{
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+}> {
   // Fetch current values first so we don't blank out fields
   const current = await getProfileFormData(session);
 
@@ -1006,11 +1438,19 @@ export async function changeProfilePicture(
   session: IGSession,
   imageData: ArrayBuffer,
   filename = "profile_pic.jpg",
-): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+): Promise<{
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+}> {
   const url = `${BASE}/api/v1/web/accounts/web_change_profile_picture/`;
 
   const formData = new FormData();
-  formData.append("profile_pic", new Blob([imageData], { type: "image/jpeg" }), filename);
+  formData.append(
+    "profile_pic",
+    new Blob([imageData], { type: "image/jpeg" }),
+    filename,
+  );
 
   // Strip content-type so fetch sets the multipart boundary automatically
   const headers = buildHeaders(session);
@@ -1023,7 +1463,10 @@ export async function changeProfilePicture(
   });
 
   if (!resp.ok) {
-    return { success: false, error: `Profile pic change failed: ${resp.status}` };
+    return {
+      success: false,
+      error: `Profile pic change failed: ${resp.status}`,
+    };
   }
 
   const data = await resp.json();

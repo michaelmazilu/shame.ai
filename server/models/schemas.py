@@ -6,6 +6,18 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+# -- Auth --
+
+class IGSessionCreate(BaseModel):
+    """Session data from webapp Playwright login."""
+    cookies: str
+    csrf_token: str
+    user_id: str
+    username: str = ""
+    fb_dtsg: Optional[str] = None
+    lsd: Optional[str] = None
+
+
 # -- DM --
 
 class DMRequest(BaseModel):

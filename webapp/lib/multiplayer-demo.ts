@@ -1,5 +1,6 @@
 import type { MpSession } from "./multiplayer-session";
 import type { RoomState } from "./multiplayer-types";
+import { weightedRandomPunishment } from "./punishments";
 
 const DEMO_HOST_PLACEHOLDER = "demo-host-placeholder";
 
@@ -139,6 +140,7 @@ export function demoStartRound(session: MpSession, prev: RoomState): RoomState {
   const roundId = crypto.randomUUID();
   const t = isoNow();
   const nextIndex = (prev.latest_round?.round_index ?? 0) + 1;
+  const punishment = weightedRandomPunishment();
   return {
     ...prev,
     latest_round: {
@@ -146,9 +148,13 @@ export function demoStartRound(session: MpSession, prev: RoomState): RoomState {
       round_index: nextIndex,
       victim_player_id: victim,
       deed: {
-        type: "demo_dare",
+        type: punishment.id,
         params: {
-          hint: "Preview only — add Supabase keys for a real synced room.",
+          name: punishment.name,
+          emoji: punishment.emoji,
+          description: punishment.description,
+          category: punishment.category,
+          prompt: punishment.prompt,
         },
       },
       status: "assigned",
@@ -213,8 +219,7 @@ export function demoRoomStateFromSession(s: MpSession): RoomState {
     });
   }
 
-  const youId =
-    s.role === "host" ? s.host_player_id! : s.guest_player_id!;
+  const youId = s.role === "host" ? s.host_player_id! : s.guest_player_id!;
 
   return {
     room: { id: s.room_id, short_code: code, status: "open", created_at: t },

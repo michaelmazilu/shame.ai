@@ -10,6 +10,7 @@ export type RoomState = {
     id: string;
     role: string;
     display_name: string | null;
+    ig_username?: string | null;
     last_seen_at: string;
     joined_at: string;
   }>;
@@ -17,7 +18,11 @@ export type RoomState = {
     id: string;
     round_index: number;
     victim_player_id: string;
-    deed: { type: string; params: Record<string, unknown>; template_id?: string };
+    deed: {
+      type: string;
+      params: Record<string, unknown>;
+      template_id?: string;
+    };
     status: string;
     result_status?: string | null;
     result_detail?: string | null;
