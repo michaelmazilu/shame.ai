@@ -282,8 +282,14 @@ function StatsBar({ victimCount, ritualCount }: { victimCount: number; ritualCou
 
 /* ── Main ── */
 
-export default function Roulette() {
+interface RouletteProps {
+  mode?: "solo" | "group";
+  groupMembers?: { id: string; username: string; fullName?: string; profilePic?: string }[];
+}
+
+export default function Roulette({ mode = "group", groupMembers }: RouletteProps) {
   const state = useRouletteState();
+  const isSolo = mode === "solo";
   const [mpSession, setMpSession] = useState<MpSession | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
 
@@ -312,6 +318,13 @@ export default function Roulette() {
 
   const isSpinning = state.phase === "spinning";
   const canSpin = state.phase === "idle" && state.profiles.length > 0;
+
+  // Solo mode: auto-lock victim immediately since you ARE the victim
+  useEffect(() => {
+    if (isSolo && isSpinning && !state.victimLocked) {
+      state.onVictimLocked();
+    }
+  }, [isSolo, isSpinning, state.victimLocked, state.onVictimLocked]);
 
   if (state.loading) {
     return (
@@ -358,11 +371,13 @@ export default function Roulette() {
             {isSpinning ? (
               <span>The wheel is spinning. <span className="text-rose font-semibold">No take-backs</span>.</span>
             ) : state.phase === "locked" ? (
-              <span>All three wheels are <span className="text-rose font-semibold">locking in</span>...</span>
+              <span>The wheels are <span className="text-rose font-semibold">locking in</span>...</span>
             ) : state.phase === "result" || state.phase === "sending" ? (
               <span>Review the <span className="text-rose font-semibold">ritual</span> and <span className="text-rose font-semibold">send the shame</span> below.</span>
             ) : state.phase === "sent" ? (
               <span>The deed is done. <span className="text-rose font-semibold">Spin again</span> for more chaos.</span>
+            ) : isSolo ? (
+              <span>Spin to pick a <span className="text-rose font-semibold">ritual</span> and a <span className="text-rose font-semibold">target</span>. Pull the lever or hit the button.</span>
             ) : (
               <span>Spin to pick a <span className="text-rose font-semibold">victim</span>, a <span className="text-rose font-semibold">ritual</span>, and a <span className="text-rose font-semibold">target</span>. Pull the lever or hit the button.</span>
             )}
@@ -371,16 +386,16 @@ export default function Roulette() {
 
         <StatsBar victimCount={state.profiles.length} ritualCount={RITUALS.length} />
 
-        {/* === SLOT MACHINE — centred with lever on the side === */}
+        {/* === SLOT MACHINE === */}
         <div className="flex-1 flex items-stretch min-h-0 mb-2 w-full max-w-4xl relative">
-          {/* Reels — centred */}
           <div className="flex-1 flex items-stretch gap-4">
-            <VerticalReel icon="🎯" label="Victim" spinning={isSpinning} locked={state.victimLocked} totalTicks={18} items={profileItems} selectedIndex={state.selectedVictimIndex} onLocked={state.onVictimLocked} />
-            <VerticalReel icon="💀" label="Ritual" spinning={isSpinning} locked={state.ritualLocked} totalTicks={24} items={ritualItems} selectedIndex={state.selectedRitualIndex} onLocked={state.onRitualLocked} />
-            <VerticalReel icon="📩" label="Target" spinning={isSpinning} locked={state.targetLocked} totalTicks={30} items={profileItems} selectedIndex={state.selectedTargetIndex} onLocked={state.onTargetLocked} />
+            {!isSolo && (
+              <VerticalReel icon="🎯" label="Victim" spinning={isSpinning} locked={state.victimLocked} totalTicks={18} items={groupMembers?.length ? groupMembers.map((m) => ({ id: m.id, primary: `@${m.username}`, secondary: m.fullName, pic: m.profilePic })) : profileItems} selectedIndex={state.selectedVictimIndex} onLocked={state.onVictimLocked} />
+            )}
+            <VerticalReel icon="💀" label="Ritual" spinning={isSpinning} locked={state.ritualLocked} totalTicks={isSolo ? 20 : 24} items={ritualItems} selectedIndex={state.selectedRitualIndex} onLocked={state.onRitualLocked} />
+            <VerticalReel icon="📩" label="Target" spinning={isSpinning} locked={state.targetLocked} totalTicks={isSolo ? 28 : 30} items={profileItems} selectedIndex={state.selectedTargetIndex} onLocked={state.onTargetLocked} />
           </div>
 
-          {/* Lever — positioned absolutely to the right so it doesn't shift the reels */}
           <div className="absolute -right-20 top-0 bottom-0 hidden sm:flex w-16">
             <SlotLever onPull={state.spin} disabled={!canSpin} />
           </div>

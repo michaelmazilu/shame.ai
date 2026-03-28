@@ -3,8 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+<<<<<<< Updated upstream
 import Roulette from "@/components/Roulette";
 import GroupRoomPanel from "@/components/GroupRoomPanel";
+=======
+import type { IGProfile } from "@/lib/types";
+import Roulette from "@/components/roulette/Roulette";
+import GroupSetup from "@/components/GroupSetup";
+>>>>>>> Stashed changes
 
 type AppStep = "pick-mode" | "group-room" | "playing";
 type GameMode = "solo" | "group";
