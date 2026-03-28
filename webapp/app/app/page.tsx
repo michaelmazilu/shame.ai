@@ -1,10 +1,9 @@
-import CardStack from "@/components/CardStack";
+import Roulette from "@/components/Roulette";
 import Link from "next/link";
 
 export default function AppPage() {
   return (
     <main className="h-dvh bg-cream-light flex flex-col overflow-hidden">
-      {/* Header */}
       <header className="flex items-center justify-between px-5 py-3 bg-white border-b border-beige/40">
         <Link href="/" className="text-sm font-bold tracking-tight text-zinc-900">
           shame<span className="text-rose">.ai</span>
@@ -19,9 +18,8 @@ export default function AppPage() {
         </div>
       </header>
 
-      {/* Card stack fills remaining space */}
-      <div className="flex-1 relative">
-        <CardStack />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Roulette />
       </div>
     </main>
   );
