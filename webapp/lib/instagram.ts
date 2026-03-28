@@ -447,25 +447,62 @@ export async function loginToInstagram(
 
   if (loginData.message === "checkpoint_required" || loginData.checkpoint_url) {
     const checkpointUrl = loginData.checkpoint_url as string;
+    const fullCheckpointUrl = checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`;
+    const cookieStr = allCookies.map((c) => c.split(";")[0]).join("; ");
 
-    // Request that Instagram send the verification code
+    // Step 1: GET the checkpoint page to initialize it and get any new cookies
+    let getBody = "";
     try {
-      const challengeResp = await fetch(
-        checkpointUrl.startsWith("http") ? checkpointUrl : `${BASE}${checkpointUrl}`,
-        {
-          headers: {
-            "user-agent": USER_AGENT,
-            cookie: allCookies.map((c) => c.split(";")[0]).join("; "),
-            referer: `${BASE}/accounts/login/`,
-          },
-          redirect: "manual",
+      const getResp = await fetch(fullCheckpointUrl, {
+        headers: {
+          "user-agent": USER_AGENT,
+          cookie: cookieStr,
+          referer: `${BASE}/accounts/login/`,
         },
-      );
-      const challengeCookies = challengeResp.headers.getSetCookie?.() || [];
-      allCookies.push(...challengeCookies);
-    } catch {
-      // Non-critical — the code may be sent automatically
+        redirect: "manual",
+      });
+      const getCookies = getResp.headers.getSetCookie?.() || [];
+      allCookies.push(...getCookies);
+      getBody = await getResp.text();
+      console.log("[Checkpoint] Step 1 GET status:", getResp.status);
+      console.log("[Checkpoint] Step 1 GET body (first 500):", getBody.slice(0, 500));
+      console.log("[Checkpoint] Step 1 GET cookies:", getCookies.length, "new cookies");
+    } catch (e) {
+      console.error("[Checkpoint] Step 1 GET failed:", e);
     }
+
+    const cookieStr2 = allCookies.map((c) => c.split(";")[0]).join("; ");
+    const latestCsrf = cookieStr2.match(/csrftoken=([^;]+)/)?.[1] || csrfToken;
+
+    // Step 2: POST choice=1 to request the code via email (choice=0 = SMS, choice=1 = email)
+    try {
+      const choiceResp = await fetch(fullCheckpointUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": USER_AGENT,
+          "x-csrftoken": latestCsrf,
+          "x-requested-with": "XMLHttpRequest",
+          "x-ig-app-id": APP_ID,
+          cookie: cookieStr2,
+          referer: fullCheckpointUrl,
+          origin: BASE,
+        },
+        body: new URLSearchParams({ choice: "1" }),
+        redirect: "manual",
+      });
+      const choiceCookies = choiceResp.headers.getSetCookie?.() || [];
+      allCookies.push(...choiceCookies);
+      const choiceBody = await choiceResp.text();
+      console.log("[Checkpoint] Step 2 POST choice=1 status:", choiceResp.status);
+      console.log("[Checkpoint] Step 2 POST body (first 500):", choiceBody.slice(0, 500));
+      console.log("[Checkpoint] Step 2 POST cookies:", choiceCookies.length, "new cookies");
+    } catch (e) {
+      console.error("[Checkpoint] Step 2 POST failed:", e);
+    }
+
+    const finalCookieStr = allCookies.map((c) => c.split(";")[0]).join("; ");
+    const finalCsrfForCheckpoint = finalCookieStr.match(/csrftoken=([^;]+)/)?.[1] || latestCsrf;
 
     return {
       success: false,
@@ -473,8 +510,8 @@ export async function loginToInstagram(
       checkpointInfo: {
         checkpointUrl,
         username,
-        cookies: allCookies.map((c) => c.split(";")[0]).join("; "),
-        csrfToken,
+        cookies: finalCookieStr,
+        csrfToken: finalCsrfForCheckpoint,
       },
     };
   }
