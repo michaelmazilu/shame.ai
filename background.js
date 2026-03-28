@@ -256,13 +256,13 @@ const AZURE_ENDPOINT =
 
 const TONE_PROMPTS = {
   casual:
-    "Write in a relaxed, friendly, approachable tone. Sound natural, like texting a friend.",
+    "Tone: chill and low-key. Like you're texting someone you vaguely know. No pressure.",
   flirty:
-    "Write in a confident, playful, slightly flirtatious tone. Be charming but not over-the-top.",
+    "Tone: subtly confident. A little playful, never desperate or cheesy.",
   witty:
-    "Write in a clever, humorous tone. Use wordplay or an unexpected angle to stand out.",
+    "Tone: dry humor or a clever observation. Not trying too hard to be funny.",
   professional:
-    "Write in a polite, respectful, networking-oriented tone. Keep it warm but professional.",
+    "Tone: warm but professional. Like a friendly LinkedIn message, not corporate.",
 };
 
 const AZURE_API_KEY =
@@ -282,24 +282,25 @@ async function generateMessage(tone) {
         {
           role: "system",
           content: [
-            "You write short Instagram DM opening messages.",
+            "You generate very short Instagram DM openers.",
             toneGuide,
-            "Rules:",
-            "- One to two sentences maximum.",
-            "- Do NOT use any emojis.",
-            "- Do NOT use generic pickup lines.",
-            "- Be original — every message should feel different.",
-            "- Return ONLY the message text, nothing else.",
-          ].join(" "),
+            "Hard rules:",
+            "- ONE sentence only. Keep it under 15 words.",
+            "- No emojis. No exclamation marks.",
+            "- Never compliment their appearance or say you 'came across their profile'.",
+            "- Never use pickup lines, puns, or anything that sounds rehearsed.",
+            "- Don't be pushy, overly personal, or weirdly intimate with a stranger.",
+            "- Sound like a real person, not a bot. Be brief and natural.",
+            "- Output ONLY the message. No quotes, no labels, nothing else.",
+          ].join("\n"),
         },
         {
           role: "user",
-          content:
-            "Generate a single unique opening message to send to someone on Instagram.",
+          content: "Write one short DM opener.",
         },
       ],
-      max_tokens: 120,
-      temperature: 1.0,
+      max_tokens: 60,
+      temperature: 0.9,
     }),
   });
 

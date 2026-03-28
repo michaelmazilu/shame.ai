@@ -342,9 +342,14 @@ const SwipeUI = (() => {
       fallbackEl.style.display = "flex";
     }
 
+    let generating = false;
+
     function requestGenerate() {
+      if (generating) return;
+      generating = true;
       showLoading();
       chrome.runtime.sendMessage({ type: "ST_GENERATE_MESSAGE" }, (resp) => {
+        generating = false;
         if (resp?.ok) {
           showResult(resp.message);
         } else {
@@ -360,17 +365,18 @@ const SwipeUI = (() => {
 
     sendBtn.addEventListener("click", () => {
       const message = textareaEl.value.trim();
+      if (!message) return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending…";
+      rerollBtn.disabled = true;
       dismiss();
-      if (message && onSwipeRight) {
-        onSwipeRight(profile, message);
-      }
+      onSwipeRight(profile, message);
     });
 
     templateBtn.addEventListener("click", () => {
+      templateBtn.disabled = true;
       dismiss();
-      if (onSwipeRight) {
-        onSwipeRight(profile, null);
-      }
+      onSwipeRight(profile, null);
     });
 
     requestGenerate();
