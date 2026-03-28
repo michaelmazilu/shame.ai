@@ -20,7 +20,7 @@ export default function SpinButton({ phase, onSpin, onReset, disabled }: SpinBut
         whileTap={{ scale: 0.97 }}
         onClick={onSpin}
         disabled={disabled}
-        className="w-full max-w-2xl py-4 text-base font-bold bg-gradient-to-r from-pink to-rose text-white rounded-2xl shadow-[0_0_30px_rgba(227,107,138,0.2)] disabled:opacity-40 transition-shadow"
+        className="w-full w-full py-4 text-base font-bold bg-gradient-to-r from-pink to-rose text-white rounded-2xl shadow-[0_0_30px_rgba(227,107,138,0.2)] disabled:opacity-40 transition-shadow"
       >
         Spin the Wheel of Shame
       </motion.button>
@@ -47,7 +47,7 @@ export default function SpinButton({ phase, onSpin, onReset, disabled }: SpinBut
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={onReset}
-        className="w-full max-w-2xl py-4 text-base font-bold bg-white text-zinc-900 rounded-2xl border-2 border-beige/60 hover:border-rose/40 transition-colors"
+        className="w-full w-full py-4 text-base font-bold bg-white text-zinc-900 rounded-2xl border-2 border-beige/60 hover:border-rose/40 transition-colors"
       >
         Spin Again
       </motion.button>
