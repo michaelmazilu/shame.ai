@@ -16,10 +16,50 @@ import urllib.parse
 import urllib.request
 import ssl
 
+from openai import AzureOpenAI
+
 # Ensure test/ directory is on the path so config.py can be imported
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import ACCOUNTS, GRAPHQL_TOKENS, headers as config_headers
+
+# ── Azure OpenAI ──
+
+azure_client = AzureOpenAI(
+    api_version="2024-12-01-preview",
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+)
+
+
+def generate_confession(username, full_name=None, bio=None):
+    """Generate a love confession DM using Azure OpenAI."""
+    name = full_name or username
+    context = f"Their name is {name} (Instagram: @{username})."
+    if bio:
+        context += f" Their bio says: \"{bio}\""
+    resp = azure_client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You write short, flirty Instagram DMs. Keep it under 2 sentences. "
+                    "Be casual, confident, a little cheesy but not cringe. "
+                    "Don't use emojis excessively. No hashtags. "
+                    "This is a love confession / shooting your shot message. "
+                    "If you know something about them from their bio, reference it naturally."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"Write a love confession DM. {context}",
+            },
+        ],
+        max_tokens=100,
+        temperature=0.9,
+    )
+    return resp.choices[0].message.content.strip()
 
 ACTIVE = ACCOUNTS[0]
 
@@ -140,6 +180,88 @@ def get_all_followers(user_id):
     return all_users
 
 
+PROFILES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles.json")
+
+
+def load_profile_cache():
+    if os.path.exists(PROFILES_PATH):
+        with open(PROFILES_PATH, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_profile_cache(cache):
+    with open(PROFILES_PATH, "w") as f:
+        json.dump(cache, f, indent=2)
+
+
+def get_profile_info(username):
+    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={urllib.parse.quote(username)}"
+    status, data = rate_limited_request(url)
+    if status != 200:
+        return None
+    user = (data.get("data") or {}).get("user")
+    if not user:
+        return None
+    mutual_edges = (user.get("edge_mutual_followed_by") or {}).get("edges", [])
+    return {
+        "id": user.get("id"),
+        "username": user.get("username"),
+        "fullName": user.get("full_name", ""),
+        "bio": user.get("biography", ""),
+        "profilePic": user.get("profile_pic_url_hd") or user.get("profile_pic_url", ""),
+        "followers": (user.get("edge_followed_by") or {}).get("count", 0),
+        "following": (user.get("edge_follow") or {}).get("count", 0),
+        "postCount": (user.get("edge_owner_to_timeline_media") or {}).get("count", 0),
+        "isPrivate": user.get("is_private", False),
+        "isVerified": user.get("is_verified", False),
+        "pronouns": user.get("pronouns", []),
+        "externalUrl": user.get("external_url"),
+        "mutualFollowers": (user.get("edge_mutual_followed_by") or {}).get("count", 0),
+        "mutualFollowerNames": [e.get("node", {}).get("username") for e in mutual_edges],
+    }
+
+
+def enrich_and_cache(target, cache):
+    """Fetch full profile, display it, save to cache."""
+    uid = target["id"]
+    if uid in cache:
+        info = cache[uid]
+        print(f"  {DIM}(cached){RESET}")
+    else:
+        print(f"  {DIM}Fetching profile...{RESET}")
+        info = get_profile_info(target["username"])
+        if info:
+            cache[uid] = info
+            save_profile_cache(cache)
+
+    if not info:
+        print(f"  {BOLD}@{target['username']}{RESET}  {DIM}{target.get('fullName', '')}{RESET}")
+        return info
+
+    name = info.get("fullName") or info["username"]
+    verified = " ✓" if info.get("isVerified") else ""
+    print(f"  {BOLD}{name}{verified}{RESET}  @{info['username']}")
+    if info.get("pronouns"):
+        print(f"  {DIM}{'/'.join(info['pronouns'])}{RESET}")
+    if info.get("bio"):
+        print(f"  {DIM}{info['bio'][:150]}{RESET}")
+    if info.get("externalUrl"):
+        print(f"  {DIM}{info['externalUrl']}{RESET}")
+    stats = f"  {info['followers']} followers | {info['following']} following | {info['postCount']} posts"
+    print(stats)
+    if info.get("mutualFollowers", 0) > 0:
+        names = info.get("mutualFollowerNames", [])
+        mutual_str = f"{info['mutualFollowers']} mutual"
+        if names:
+            mutual_str += f" incl. @{', @'.join(names[:3])}"
+        print(f"  {CYAN}{mutual_str}{RESET}")
+    if info.get("profilePic"):
+        print(f"  {DIM}pic: {info['profilePic'][:80]}...{RESET}")
+
+    return info
+
+
 def send_dm_graphql(recipient_id, text):
     offline_id = str(random.randint(10**18, 9 * 10**18))
     variables = {
@@ -178,6 +300,54 @@ def send_dm_graphql(recipient_id, text):
     )
     errors = data.get("errors", []) if isinstance(data, dict) else []
     return status == 200 and len(errors) == 0
+
+
+def resolve_media_id(reel_url_or_shortcode):
+    """Resolve a reel/post URL or shortcode to a media_id."""
+    shortcode = reel_url_or_shortcode.strip().rstrip("/")
+    for prefix in ("/reel/", "/reels/", "/p/"):
+        if prefix in shortcode:
+            shortcode = shortcode.split(prefix)[-1].split("/")[0].split("?")[0]
+            break
+
+    status, data = rate_limited_request(
+        f"https://www.instagram.com/api/v1/media/{shortcode}/media_id/"
+    )
+    if status == 200 and isinstance(data, dict) and data.get("media_id"):
+        return data["media_id"]
+
+    status, data = rate_limited_request(
+        f"https://www.instagram.com/api/v1/media/{shortcode}/info/"
+    )
+    if status == 200 and isinstance(data, dict):
+        items = data.get("items", [])
+        if items:
+            return str(items[0].get("pk") or items[0].get("id"))
+
+    return None
+
+
+def send_reel_dm(recipient_id, reel_url, text=None):
+    """Send a reel to a user via DM with an optional message."""
+    media_id = resolve_media_id(reel_url)
+    if not media_id:
+        return False
+
+    form_data = {
+        "recipient_users": json.dumps([str(recipient_id)]),
+        "action": "send_item",
+        "media_id": media_id,
+        "media_type": "clips",
+    }
+    if text:
+        form_data["text"] = text
+
+    status, _data = rate_limited_request(
+        "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
+        method="POST",
+        data=form_data,
+    )
+    return status == 200
 
 
 # ── Display ──
@@ -243,7 +413,10 @@ def main():
         print(f"  {GREEN}{i + 1:>3}.{RESET} @{p['username']}{name_part}")
 
     print(f"\n{DIM}{len(mutuals)} people you can DM right now.{RESET}")
-    print(f"{DIM}Enter a number to DM someone, or q to quit.{RESET}\n")
+    print(f"{DIM}Pick a number → see their profile → AI confession → sent.{RESET}")
+    print(f"{DIM}[r] = reel, [c] = custom msg, q to quit.{RESET}\n")
+
+    profile_cache = load_profile_cache()
 
     # DM loop
     while True:
@@ -253,30 +426,46 @@ def main():
         try:
             idx = int(pick) - 1
             if idx < 0 or idx >= len(mutuals):
-                print(f"  {RED}Pick a number between 1 and {len(mutuals)}{RESET}")
+                print(f"  {RED}Pick 1-{len(mutuals)}{RESET}")
                 continue
         except ValueError:
             print(f"  {RED}Enter a number or q{RESET}")
             continue
 
         target = mutuals[idx]
-        name = target.get("fullName") or target["username"]
-        print(f"\n  {BOLD}@{target['username']}{RESET}  {DIM}{name}{RESET}")
-        msg = input("  Message: ").strip()
-        if not msg:
-            print(f"  {DIM}Skipped (empty message){RESET}\n")
-            continue
+        info = enrich_and_cache(target, profile_cache)
+        mode = input(f"  [Enter] = AI confession, [r] = reel, [c] = custom msg: ").strip().lower()
 
-        confirm = input(f"  Send to @{target['username']}? [Y/n]: ").strip().lower()
-        if confirm == "n":
-            print(f"  {DIM}Cancelled{RESET}\n")
-            continue
-
-        print(f"  Sending...")
-        if send_dm_graphql(target["id"], msg):
-            print(f"  {GREEN}Sent to @{target['username']}!{RESET}\n")
+        if mode in ("r", "reel"):
+            reel_url = input("  Reel URL or shortcode: ").strip()
+            if not reel_url:
+                continue
+            msg = input("  Message (optional): ").strip() or None
+            print(f"  Sending reel...")
+            if send_reel_dm(target["id"], reel_url, msg):
+                print(f"  {GREEN}Reel sent to @{target['username']}!{RESET}\n")
+            else:
+                print(f"  {RED}Failed to send reel{RESET}\n")
+        elif mode in ("c", "custom"):
+            msg = input("  Message: ").strip()
+            if not msg:
+                continue
+            print(f"  Sending...")
+            if send_dm_graphql(target["id"], msg):
+                print(f"  {GREEN}Sent to @{target['username']}!{RESET}\n")
+            else:
+                print(f"  {RED}Failed{RESET}\n")
         else:
-            print(f"  {RED}Failed to send DM{RESET}\n")
+            # AI-generated love confession using profile context
+            print(f"  {DIM}Generating confession...{RESET}")
+            bio = (info or {}).get("bio", "")
+            msg = generate_confession(target["username"], target.get("fullName"), bio)
+            print(f"  {CYAN}\"{msg}\"{RESET}")
+            print(f"  Sending...")
+            if send_dm_graphql(target["id"], msg):
+                print(f"  {GREEN}Sent to @{target['username']}!{RESET}\n")
+            else:
+                print(f"  {RED}Failed{RESET}\n")
 
 
 if __name__ == "__main__":

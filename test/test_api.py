@@ -11,9 +11,11 @@ Usage: python test/test_api.py [test-name]
   python test/test_api.py unfollow <id>    — unfollow a user
   python test/test_api.py follow-rt <id>   — follow then unfollow (round-trip)
   python test/test_api.py upload <file>    — upload a photo (no publish)
+  python test/test_api.py send-reel <id> <url> [msg] — send a reel via DM to a user
   python test/test_api.py post <file> [caption] — upload + publish a feed post
   python test/test_api.py edit-profile     — update profile (bio, name, username, etc.)
   python test/test_api.py change-pic <file> — change profile picture
+  python test/test_api.py comment <media_id> [text] — comment on a post
   python test/test_api.py all              — run all read-only tests
 """
 
@@ -429,6 +431,95 @@ def test_edit_profile(fields=None):
         return {"success": False}
 
 
+def resolve_media_id(reel_url_or_shortcode):
+    """Resolve a reel URL or shortcode to a media_id.
+
+    Accepts:
+      - Full URL: https://www.instagram.com/reels/DWZkVB5gXdx/
+      - Shortcode: DWZkVB5gXdx
+    """
+    shortcode = reel_url_or_shortcode.strip().rstrip("/")
+    # Extract shortcode from URL
+    for prefix in ("/reel/", "/reels/", "/p/"):
+        if prefix in shortcode:
+            shortcode = shortcode.split(prefix)[-1].split("/")[0].split("?")[0]
+            break
+
+    print(f"  Resolving shortcode: {shortcode}")
+
+    resp = requests.get(
+        f"https://www.instagram.com/api/v1/media/{shortcode}/media_id/",
+        headers=HEADERS,
+    )
+
+    if resp.ok:
+        data = resp.json()
+        media_id = data.get("media_id")
+        print(f"  media_id: {media_id}")
+        return media_id
+
+    # Fallback: fetch the post page info
+    resp = requests.get(
+        f"https://www.instagram.com/api/v1/media/{shortcode}/info/",
+        headers=HEADERS,
+    )
+    if resp.ok:
+        data = resp.json()
+        items = data.get("items", [])
+        if items:
+            media_id = str(items[0].get("pk") or items[0].get("id"))
+            print(f"  media_id (from info): {media_id}")
+            return media_id
+
+    print(f"  Could not resolve media_id for: {shortcode}")
+    return None
+
+
+def test_send_reel(recipient_id, reel_url, text=None):
+    """Send a reel to a user via DM with an optional message."""
+    if not recipient_id or not reel_url:
+        print("Usage: python test/test_api.py send-reel <userId> <reelUrl> [message]")
+        sys.exit(1)
+
+    print(f"\n=== TEST: sendReel to {recipient_id} ===")
+    print(f"  Reel: {reel_url}")
+    if text:
+        print(f'  Message: "{text}"')
+
+    media_id = resolve_media_id(reel_url)
+    if not media_id:
+        print("FAILED — could not resolve media_id")
+        return {"success": False}
+
+    # Use the media_share broadcast endpoint
+    body = {
+        "recipient_users": json.dumps([str(recipient_id)]),
+        "action": "send_item",
+        "media_id": media_id,
+        "media_type": "clips",
+    }
+    if text:
+        body["text"] = text
+
+    resp = requests.post(
+        "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
+        headers={**HEADERS, "content-type": "application/x-www-form-urlencoded"},
+        data=body,
+    )
+
+    print("Status:", resp.status_code)
+
+    if resp.ok:
+        data = resp.json()
+        print("SUCCESS — reel sent via DM")
+        print("  Response:", json.dumps(data, indent=2)[:500])
+        return {"success": True, "data": data}
+    else:
+        print("FAILED")
+        print("  Response:", resp.text[:500])
+        return {"success": False}
+
+
 def test_simulate(message=None):
     """Full pipeline: fetch following → pick a random person → send DM."""
     message = message or "hey, just wanted to say what's good 👋"
@@ -478,6 +569,33 @@ def test_simulate(message=None):
         print(f"\n✅ Pipeline complete — DM sent to @{target['username']}")
     else:
         print(f"\n❌ Pipeline failed — DM to @{target['username']} did not go through")
+
+
+def test_comment(media_id, text=None):
+    if not media_id:
+        print("Usage: python test/test_api.py comment <media_id> [text]")
+        sys.exit(1)
+    text = text or "[ShotTaker test] comment works!"
+    print(f"\n=== TEST: commentOnPost({media_id}) ===")
+    print(f'  comment_text: "{text}"')
+
+    resp = requests.post(
+        f"https://www.instagram.com/api/v1/web/comments/{media_id}/add/",
+        headers={**HEADERS, "content-type": "application/x-www-form-urlencoded"},
+        data={"comment_text": text},
+    )
+
+    print("Status:", resp.status_code)
+
+    if resp.ok:
+        data = resp.json()
+        print("SUCCESS — comment posted")
+        print("  Response:", json.dumps(data, indent=2)[:500])
+        return {"success": True, "data": data}
+    else:
+        print("FAILED")
+        print("  Response:", resp.text[:500])
+        return {"success": False}
 
 
 def parse_edit_profile_args(argv):
@@ -542,6 +660,20 @@ def main():
             sys.argv[2] if len(sys.argv) > 2 else None,
             sys.argv[3] if len(sys.argv) > 3 else None,
         )
+    elif test_name == "send-reel":
+        if len(sys.argv) < 4:
+            print("Usage: python test/test_api.py send-reel <userId> <reelUrl> [message]")
+            sys.exit(1)
+        test_send_reel(
+            sys.argv[2],
+            sys.argv[3],
+            sys.argv[4] if len(sys.argv) > 4 else None,
+        )
+    elif test_name == "comment":
+        test_comment(
+            sys.argv[2] if len(sys.argv) > 2 else None,
+            sys.argv[3] if len(sys.argv) > 3 else None,
+        )
     elif test_name == "simulate":
         test_simulate(sys.argv[2] if len(sys.argv) > 2 else None)
     elif test_name == "all":
@@ -551,7 +683,7 @@ def main():
         print("\n(Skipping send/follow tests — run explicitly)")
     else:
         print("Unknown test:", test_name)
-        print("Available: explore, profile, send-self, send, simulate, follow, unfollow, follow-rt, upload, post, edit-profile, change-pic, all")
+        print("Available: explore, profile, send-self, send, send-reel, comment, simulate, follow, unfollow, follow-rt, upload, post, edit-profile, change-pic, all")
 
 
 if __name__ == "__main__":

@@ -289,6 +289,33 @@ const InstagramAPI = (() => {
     return { success: resp.ok, data };
   }
 
+  // Send a reel/post via DM with an optional message
+  async function sendReelDM(userId, mediaId, text) {
+    const url =
+      "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/";
+
+    const params = {
+      recipient_users: JSON.stringify([userId]),
+      action: "send_item",
+      media_id: mediaId,
+      media_type: "clips",
+    };
+    if (text) params.text = text;
+
+    const body = new URLSearchParams(params);
+
+    const resp = await rateLimitedFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: body,
+    });
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
   // Follow a user
   async function followUser(userId) {
     const url = `https://www.instagram.com/api/v1/friendships/create/${userId}/`;
@@ -526,6 +553,25 @@ const InstagramAPI = (() => {
     return { success: resp.ok, data };
   }
 
+  // Comment on a post
+  async function commentOnPost(mediaId, text) {
+    const body = new URLSearchParams({ comment_text: text });
+
+    const resp = await rateLimitedFetch(
+      `https://www.instagram.com/api/v1/web/comments/${mediaId}/add/`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: body,
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
   // Edit account profile (bio, name, username, url, etc.)
   async function editProfile(fields = {}) {
     const body = new URLSearchParams();
@@ -558,6 +604,7 @@ const InstagramAPI = (() => {
     getExploreProfiles,
     sendDM,
     sendDMGraphQL,
+    sendReelDM,
     uploadPhoto,
     postPhoto,
     followUser,
@@ -567,6 +614,7 @@ const InstagramAPI = (() => {
     setGraphQLTokens,
     hasGraphQLTokens,
     getUserPosts,
+    commentOnPost,
     changeProfilePicture,
     editProfile,
     getHeaders,
