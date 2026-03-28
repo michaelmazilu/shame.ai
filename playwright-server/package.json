@@ -1,0 +1,13 @@
+{
+  "name": "playwright-server",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npx tsx server.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "playwright": "^1.52.0",
+    "tsx": "^4.19.0",
+    "@types/express": "^5.0.0"
+  }
+}

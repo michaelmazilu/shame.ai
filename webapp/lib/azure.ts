@@ -1,12 +1,14 @@
 export async function generateRitualMessage(ritualPrompt: string, targetUsername: string): Promise<string> {
-  const endpoint = process.env.AZURE_ENDPOINT;
-  const apiKey = process.env.AZURE_API_KEY;
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT || process.env.AZURE_ENDPOINT;
+  const apiKey = process.env.AZURE_OPENAI_API_KEY || process.env.AZURE_API_KEY;
 
   if (!endpoint || !apiKey) {
     throw new Error("Azure API key or endpoint not configured");
   }
 
-  const resp = await fetch(endpoint, {
+  const url = `${endpoint.replace(/\/$/, "")}/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2024-12-01-preview`;
+
+  const resp = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

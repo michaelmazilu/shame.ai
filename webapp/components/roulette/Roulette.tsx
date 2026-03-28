@@ -433,7 +433,7 @@ export default function Roulette({ mode = "group", groupMembers }: RouletteProps
         <div className="max-w-2xl mx-auto w-full">
           <AnimatePresence>
             {state.phase === "result" && state.victim && state.ritual && state.target && (
-              <ResultCard victim={state.victim} ritual={state.ritual} target={state.target} message={state.message} messageLoading={state.messageLoading} error={state.error} onMessageChange={state.setMessage} onReroll={state.rerollMessage} onSend={state.sendMessage} />
+              <ResultCard victim={state.victim} ritual={state.ritual} target={state.target} message={state.message} messageLoading={state.messageLoading} error={state.error} solo={isSolo} onMessageChange={state.setMessage} onReroll={state.rerollMessage} onSend={state.sendMessage} />
             )}
           </AnimatePresence>
 
