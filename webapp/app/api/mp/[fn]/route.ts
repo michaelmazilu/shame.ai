@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getMpServerEnv } from "@/lib/mp-server-env";
 
 const ALLOWED = new Set([
   "create-room",
@@ -10,16 +11,6 @@ const ALLOWED = new Set([
   "close-room",
 ]);
 
-function serverConfig() {
-  const url = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
-  const key = (
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    ""
-  ).trim();
-  return { url, key };
-}
-
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ fn: string }> },
@@ -28,7 +19,7 @@ export async function POST(
   if (!ALLOWED.has(fn)) {
     return NextResponse.json({ error: "unknown_function" }, { status: 404 });
   }
-  const { url, key } = serverConfig();
+  const { url, key } = getMpServerEnv();
   if (!url || !key) {
     return NextResponse.json(
       { error: "server_misconfigured", detail: "missing SUPABASE_URL or key" },

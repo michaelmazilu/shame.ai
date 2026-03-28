@@ -305,9 +305,12 @@ export default function MultiplayerLobby() {
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`}
         </pre>
         <p className="text-xs text-zinc-400">
-          Supabase → Settings → API. Same values as repo root{" "}
-          <code>.env.local</code>, without the <code>NEXT_PUBLIC_</code> prefix.
-          Restart <code>npm run dev</code> after saving.
+          Supabase → Settings → API. If keys live in repo root{" "}
+          <code>.env.local</code> only, that file is loaded automatically when you
+          run dev from <code>webapp/</code>. You can also use{" "}
+          <code>NEXT_PUBLIC_SUPABASE_*</code> in <code>webapp/.env.local</code>{" "}
+          (server reads them; the lobby still calls <code>/api/mp</code> only).
+          Restart <code>npm run dev</code> after changing env.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
           ← Back home

@@ -4,8 +4,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 The **group room** UI calls Next.js **API routes** under `/api/mp/*`, which proxy to Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)). Supabase URL and publishable key stay **server-side** only (not in the browser bundle).
 
-1. Copy `webapp/.env.example` → `webapp/.env.local`
-2. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (same values as repo root `.env.local` if you use `SUPABASE_URL` there; no `NEXT_PUBLIC_` prefix needed).
+1. Easiest: keep Supabase vars in **repo root** `../.env.local` — `next.config.ts` loads that file when you run the app from `webapp/`, so `/room` works without duplicating keys.
+2. Or copy `webapp/.env.example` → `webapp/.env.local` and set `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` (or the older `NEXT_PUBLIC_SUPABASE_*` names; the API routes read them on the server only).
 3. `npm run dev` → open [http://localhost:3000/room](http://localhost:3000/room)
 
 For production (e.g. Vercel), add the same `SUPABASE_*` variables in the project environment settings.
