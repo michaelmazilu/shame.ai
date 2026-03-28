@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { mergeParentEnvLocalIntoProcess } from "./merge-parent-env-local";
 
 /**
  * Env for `/api/mp/*` proxy. Merges `process.env` with on-disk `.env.local`
@@ -101,6 +102,9 @@ function readParentEnvLocal(): Record<string, string> {
 }
 
 export function getMpServerEnv(): { url: string; key: string } {
+  // Re-run every call: Next may load `webapp/.env.local` with empty `KEY=`
+  // after a one-time merge, which would leave process.env stuck empty.
+  mergeParentEnvLocalIntoProcess();
   const web = readWebappEnvLocal();
   const parent = readParentEnvLocal();
 

@@ -386,9 +386,10 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
         </pre>
         <p className="text-xs text-zinc-400">
           Repo root <code className="text-[10px]">.env.local</code> is merged
-          when you run dev from <code className="text-[10px]">webapp/</code>.
-          Unsaved editor buffers are not read — save the file. Restart{" "}
-          <code className="text-[10px]">npm run dev</code> after changes.
+          into the server after Next loads env (empty lines in{" "}
+          <code className="text-[10px]">webapp/.env.local</code> won&apos;t
+          wipe parent keys). Save the file to disk; restart dev if the server
+          was already running when you edited env.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
           ← Back home
