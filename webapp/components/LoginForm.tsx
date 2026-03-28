@@ -35,11 +35,11 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-sm items-center">
+    <div className="flex flex-col gap-6 w-full items-center">
       <button
         onClick={handleBrowserLogin}
         disabled={loading}
-        className="w-full py-3.5 bg-zinc-900 text-white font-semibold rounded-xl disabled:opacity-40 transition hover:bg-zinc-800"
+        className="w-full py-3.5 bg-zinc-900 text-white font-semibold rounded-xl disabled:opacity-40 transition-colors hover:bg-zinc-800"
       >
         {loading ? "Waiting for login..." : "Log in with Instagram"}
       </button>
@@ -57,7 +57,7 @@ export default function LoginForm() {
       )}
 
       {error && (
-        <div className="bg-rose/10 border border-rose/20 rounded-xl px-4 py-2.5">
+        <div className="bg-rose/10 border border-rose/20 rounded-xl px-4 py-2.5 w-full">
           <p className="text-rose text-sm text-center">{error}</p>
         </div>
       )}
