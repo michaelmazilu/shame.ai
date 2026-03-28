@@ -1,5 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { mergeParentEnvLocalIntoProcess } from "./merge-parent-env-local";
+
+let reconciledProcessEnvForMp = false;
+
+function ensureParentEnvForMp(): void {
+  if (reconciledProcessEnvForMp) return;
+  reconciledProcessEnvForMp = true;
+  mergeParentEnvLocalIntoProcess();
+}
 
 /**
  * Env for `/api/mp/*` proxy. Merges `process.env` with on-disk `.env.local`
@@ -101,6 +110,7 @@ function readParentEnvLocal(): Record<string, string> {
 }
 
 export function getMpServerEnv(): { url: string; key: string } {
+  ensureParentEnvForMp();
   const web = readWebappEnvLocal();
   const parent = readParentEnvLocal();
 
