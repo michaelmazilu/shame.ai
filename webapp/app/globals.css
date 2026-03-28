@@ -134,6 +134,12 @@ html, body {
   animation: roulette-spin 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Wheel drum viewport fade */
+.wheel-viewport {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+}
+
 :root {
   --background: #F5F2E0;
   --foreground: #27272a;

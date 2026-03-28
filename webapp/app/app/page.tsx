@@ -1,4 +1,4 @@
-import Roulette from "@/components/Roulette";
+import Roulette from "@/components/roulette/Roulette";
 import Link from "next/link";
 
 export default function AppPage() {
