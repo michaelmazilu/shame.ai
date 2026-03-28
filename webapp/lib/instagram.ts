@@ -736,64 +736,46 @@ export async function enrichProfiles(session: IGSession, profiles: IGProfile[], 
   return enriched;
 }
 
-export async function loadProfilePipeline(
+export async function loadProfilesFast(
   session: IGSession,
   seen: Set<string>,
   sources: { suggested: boolean; explore: boolean; friendsOfFriends: boolean },
 ): Promise<IGProfile[]> {
   const allProfiles: IGProfile[] = [];
 
-  // Tier 1: Followers
+  // Tier 1: Followers — single API call, no enrichment
   try {
-    const followers = await getAllFollowers(session, session.userId, 200);
-    const tier1 = filterAndDedupe(followers, seen, session.userId);
-    if (tier1.length > 0) {
-      const enriched = await enrichProfiles(session, tier1);
-      allProfiles.push(...enriched);
-    }
+    const result = await getFollowers(session, session.userId, 50);
+    const tier1 = filterAndDedupe(result.users, seen, session.userId);
+    allProfiles.push(...tier1);
   } catch (e) {
     console.warn("[Profiles] Tier 1 (followers) failed:", e);
   }
 
-  // Tier 2: Friends of friends
-  if (sources.friendsOfFriends) {
-    try {
-      const following = await getAllFollowing(session, session.userId, 500);
-      const sampled = shuffle(following).slice(0, 10);
-      const fofProfiles: IGProfile[] = [];
-
-      for (const f of sampled) {
-        try {
-          const result = await getFollowers(session, f.id, 25);
-          fofProfiles.push(...result.users);
-        } catch {
-          // skip
-        }
-      }
-
-      const tier2 = filterAndDedupe(fofProfiles, seen, session.userId);
-      if (tier2.length > 0) {
-        const enriched = await enrichProfiles(session, tier2);
-        allProfiles.push(...enriched);
-      }
-    } catch (e) {
-      console.warn("[Profiles] Tier 2 (FoF) failed:", e);
-    }
-  }
-
-  // Tier 3: Suggested
+  // Tier 2: Suggested — single API call, no enrichment
   if (sources.suggested) {
     try {
       const suggested = await getSuggestedUsers(session);
-      const tier3 = filterAndDedupe(suggested, seen, session.userId);
-      if (tier3.length > 0) {
-        const enriched = await enrichProfiles(session, tier3);
-        allProfiles.push(...enriched);
-      }
+      const tier2 = filterAndDedupe(suggested, seen, session.userId);
+      allProfiles.push(...tier2);
     } catch (e) {
-      console.warn("[Profiles] Tier 3 (suggested) failed:", e);
+      console.warn("[Profiles] Tier 2 (suggested) failed:", e);
     }
   }
 
   return allProfiles;
+}
+
+export async function enrichSingleProfile(
+  session: IGSession,
+  username: string,
+): Promise<IGProfile | null> {
+  const full = await getProfileInfo(session, username);
+  if (!full) return null;
+  try {
+    full.recentPosts = await getUserPosts(session, full.id, 6);
+  } catch {
+    full.recentPosts = [];
+  }
+  return full;
 }

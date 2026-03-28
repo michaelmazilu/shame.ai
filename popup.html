@@ -293,6 +293,39 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Multiplayer lobby (shame.ai)</div>
+      <p class="field-hint" style="margin-bottom: 8px">
+        Next.js app — create/join rooms, same backend as Supabase Edge Functions.
+      </p>
+      <label class="field-label" for="lobby-url">Lobby URL</label>
+      <input
+        type="text"
+        class="dm-input"
+        id="lobby-url"
+        style="min-height: 36px"
+        value="http://localhost:3000/room"
+        placeholder="http://localhost:3000/room"
+      />
+      <a
+        class="btn-reset"
+        id="lobby-open"
+        href="http://localhost:3000/room"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          display: block;
+          text-align: center;
+          text-decoration: none;
+          margin-top: 10px;
+          background: #0b0b0c;
+          color: #f5f5f4;
+          border: none;
+        "
+        >Open lobby</a
+      >
+    </div>
+
+    <div class="section">
       <div class="toggle-row">
         <span class="toggle-label">Enable ShotTaker</span>
         <label class="toggle">

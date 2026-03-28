@@ -104,7 +104,7 @@ const col5 = testimonials.slice(12, 15);
 
 export default function Testimonials() {
   return (
-    <section className="bg-white border-y border-beige/40 py-20 relative overflow-hidden">
+    <section className="bg-cream-light border-y border-blush/30 py-12 relative overflow-hidden">
       <div className="z-10 mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -119,15 +119,15 @@ export default function Testimonials() {
             </div>
           </div>
 
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-5 text-zinc-900">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tighter mt-3 text-zinc-900">
             Three spins. Zero dignity.
           </h2>
-          <p className="text-center mt-5 text-zinc-500">
+          <p className="text-center mt-2 text-zinc-500">
             Hear from people who&apos;ve survived the wheel.
           </p>
         </motion.div>
 
-        <div className="flex justify-center gap-6 mt-10 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] max-h-[740px] overflow-hidden px-6">
+        <div className="flex justify-center gap-6 mt-6 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] max-h-[740px] overflow-hidden px-6">
           <TestimonialsColumn testimonials={col1} duration={14} />
           <TestimonialsColumn testimonials={col2} duration={18} />
           <TestimonialsColumn testimonials={col3} duration={16} />

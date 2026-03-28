@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { IGProfile, Settings, ShotHistoryEntry, PendingFollow } from "@/lib/types";
 import SwipeCard from "./SwipeCard";
 import MessageModal from "./MessageModal";
@@ -97,11 +97,10 @@ export default function CardStack() {
     saveToStorage("st_pending_follows", pending);
   }, []);
 
-  // Load profiles on mount
+  // Load basic profiles fast on mount
   useEffect(() => {
     async function fetchProfiles() {
       setLoading(true);
-      showStatus("Loading profiles\u2026", "info");
 
       try {
         const resp = await fetch("/api/profiles", {
@@ -132,11 +131,41 @@ export default function CardStack() {
     if (seen !== undefined) {
       fetchProfiles();
     }
-    // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Enrich the current profile in the background when it changes
   const currentProfile = profiles[0] || null;
+  const [enrichedCache, setEnrichedCache] = useState<Record<string, IGProfile>>({});
+  const enrichingRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    // Enrich the next 2 profiles ahead
+    const toEnrich = profiles.slice(0, 2);
+    for (const p of toEnrich) {
+      if (!p.username || enrichedCache[p.id] || enrichingRef.current.has(p.id)) continue;
+      enrichingRef.current.add(p.id);
+
+      fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: p.username }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.profile) {
+            setEnrichedCache((prev) => ({ ...prev, [p.id]: data.profile }));
+          }
+        })
+        .catch(() => {})
+        .finally(() => enrichingRef.current.delete(p.id));
+    }
+  }, [profiles, enrichedCache]);
+
+  // Use enriched version if available, otherwise show basic profile
+  const displayProfile = currentProfile
+    ? enrichedCache[currentProfile.id] || currentProfile
+    : null;
 
   const handleSwipeLeft = useCallback((profile: IGProfile) => {
     markSeen(profile.id);
@@ -223,17 +252,17 @@ export default function CardStack() {
           </div>
         )}
 
-        {!loading && !currentProfile && (
+        {!loading && !displayProfile && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500 px-6 text-center">
             <p className="text-lg font-medium">No more profiles</p>
             <p className="text-sm">Check back later or adjust your sources in settings.</p>
           </div>
         )}
 
-        {currentProfile && (
+        {displayProfile && (
           <SwipeCard
-            key={currentProfile.id}
-            profile={currentProfile}
+            key={displayProfile.id}
+            profile={displayProfile}
             onSwipeRight={handleSwipeRight}
             onSwipeLeft={handleSwipeLeft}
           />
@@ -241,16 +270,16 @@ export default function CardStack() {
       </div>
 
       {/* Action buttons */}
-      {currentProfile && (
+      {displayProfile && (
         <div className="flex gap-4 p-4 justify-center">
           <button
-            onClick={() => handleSwipeLeft(currentProfile)}
+            onClick={() => handleSwipeLeft(displayProfile)}
             className="flex-1 max-w-40 py-3 text-sm font-semibold text-neutral-400 bg-neutral-900 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition"
           >
             Pass
           </button>
           <button
-            onClick={() => handleSwipeRight(currentProfile)}
+            onClick={() => handleSwipeRight(displayProfile)}
             className="flex-1 max-w-40 py-3 text-sm font-semibold text-black bg-white rounded-xl hover:bg-neutral-200 transition"
           >
             Shoot

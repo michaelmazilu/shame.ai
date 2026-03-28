@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIGSession } from "@/lib/session";
-import { loadProfilePipeline } from "@/lib/instagram";
+import { loadProfilesFast } from "@/lib/instagram";
 
 export async function POST(req: NextRequest) {
   const igSession = await getIGSession();
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const seenSet = new Set<string>(seen);
 
   try {
-    const profiles = await loadProfilePipeline(igSession, seenSet, sources);
+    const profiles = await loadProfilesFast(igSession, seenSet, sources);
     return NextResponse.json({ profiles });
   } catch (e) {
     console.error("[API] Profile loading failed:", e);

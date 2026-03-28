@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Multiplayer lobby (`/room`)
+
+The **group room** UI talks **directly** to Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)).
+
+1. Copy `webapp/.env.example` → `webapp/.env.local`
+2. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same values as repo root `.env.local`, with the `NEXT_PUBLIC_` prefix on the key name).
+3. `npm run dev` → open [http://localhost:3000/room](http://localhost:3000/room)
+
+The Chrome extension in the repo root stays separate; use the web lobby for rooms and the extension for Instagram actions when you wire them later.
+
 ## Getting Started
 
 First, run the development server:

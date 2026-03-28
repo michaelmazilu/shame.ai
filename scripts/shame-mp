@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+"""
+shame.ai multiplayer — call Supabase Edge Functions without hand-written curl.
+
+Uses:
+  - SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or KEY / SUPABASE_ANON_KEY) in repo root `.env.local`
+
+Session saved to .shame-ai-session.json (gitignored).
+
+Usage:
+  ./scripts/shame-mp create Rupert          # host: creates room, saves tokens
+  ./scripts/shame-mp hb-host                # host heartbeat
+  ./scripts/shame-mp join W232LZ Player2    # guest: join by short_code (or new terminal + new session file — see below)
+  ./scripts/shame-mp hb-guest               # guest heartbeat (after join on same machine)
+  ./scripts/shame-mp start                  # host: start round (needs host_secret in session)
+  ./scripts/shame-mp submit ok "did it"     # victim submits (uses last round + victim from session)
+  ./scripts/shame-mp state host             # room-state as host
+
+  ./scripts/shame-mp close                  # host: close room
+  ./scripts/shame-mp url                    # print functions base URL
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+# Set SUPABASE_URL in repo root `.env.local` (no default — keeps repo fork-friendly).
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SESSION_PATH = REPO_ROOT / ".shame-ai-session.json"
+ENV_LOCAL = REPO_ROOT / ".env.local"
+
+
+def load_dotenv_local() -> None:
+    if not ENV_LOCAL.is_file():
+        return
+    text = ENV_LOCAL.read_text(encoding="utf-8-sig")
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" in line:
+            k, _, v = line.partition("=")
+            k, v = k.strip(), v.strip().strip('"').strip("'")
+            # .env.local wins over existing env (matches `source .env.local`)
+            if k:
+                os.environ[k] = v
+
+
+def get_url_and_key() -> tuple[str, str]:
+    load_dotenv_local()
+    url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+    key = (
+        os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+        or os.environ.get("SUPABASE_ANON_KEY", "")
+        or os.environ.get("KEY", "")
+    ).strip()
+    if not url:
+        print(
+            f"Missing SUPABASE_URL after loading {ENV_LOCAL}.\n"
+            "Add: SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not key:
+        print(
+            "Missing API key in environment after loading .env.local.\n"
+            f"Add ONE of these to {ENV_LOCAL}:\n"
+            "  SUPABASE_PUBLISHABLE_KEY=sb_publishable_...\n"
+            "  SUPABASE_ANON_KEY=eyJ...   (legacy JWT anon key)\n"
+            "  KEY=sb_publishable_...      (alias)\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return url, key
+
+
+def api_post(url: str, key: str, function_name: str, body: dict) -> dict:
+    req_url = f"{url}/functions/v1/{function_name}"
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(
+        req_url,
+        data=data,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "apikey": key,
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            err = json.loads(raw)
+        except json.JSONDecodeError:
+            err = {"error": "http_error", "status": e.code, "body": raw}
+        err["_http_status"] = e.code
+        return err
+
+
+def load_session() -> dict:
+    if not SESSION_PATH.is_file():
+        return {}
+    return json.loads(SESSION_PATH.read_text())
+
+
+def save_session(s: dict) -> None:
+    SESSION_PATH.write_text(json.dumps(s, indent=2) + "\n")
+    print(f"(saved session → {SESSION_PATH.name})", file=sys.stderr)
+
+
+def need_room(s: dict) -> dict:
+    if not s.get("room_id"):
+        print("No room in session. Run: shame-mp create … or shame-mp join …", file=sys.stderr)
+        sys.exit(1)
+    return s
+
+
+def cmd_create(who: str) -> None:
+    url, key = get_url_and_key()
+    r = api_post(url, key, "create-room", {"display_name": who})
+    if r.get("error"):
+        print(json.dumps(r, indent=2))
+        sys.exit(1)
+    s = {
+        "supabase_url": url,
+        "room_id": r["room_id"],
+        "short_code": r["short_code"],
+        "invite_token": r["invite_token"],
+        "host_secret": r["host_secret"],
+        "host_player_token": r["player_token"],
+        "host_player_id": r["host_player_id"],
+        "guest_player_token": None,
+        "guest_player_id": None,
+        "last_round_id": None,
+        "last_victim_player_id": None,
+    }
+    save_session(s)
+    print(json.dumps(r, indent=2))
+
+
+def cmd_join(code: str, who: str) -> None:
+    url, key = get_url_and_key()
+    r = api_post(
+        url,
+        key,
+        "join-room",
+        {"short_code": code.strip().upper(), "display_name": who},
+    )
+    if r.get("error"):
+        print(json.dumps(r, indent=2))
+        sys.exit(1)
+    s = load_session()
+    s["supabase_url"] = url
+    s["room_id"] = r["room_id"]
+    s["short_code"] = r.get("short_code") or s.get("short_code")
+    s["guest_player_token"] = r["player_token"]
+    s["guest_player_id"] = r["player_id"]
+    # If host already ran `create` on this machine, keep host_secret / host tokens.
+    save_session(s)
+    print(json.dumps(r, indent=2))
+
+
+def cmd_heartbeat(role: str) -> None:
+    url, key = get_url_and_key()
+    s = need_room(load_session())
+    if role == "host":
+        tok = s["host_player_token"]
+        if not tok:
+            print("No host_player_token. Run: shame-mp create", file=sys.stderr)
+            sys.exit(1)
+    else:
+        tok = s.get("guest_player_token")
+        if not tok:
+            print("No guest_player_token. Run: shame-mp join <CODE> <name>", file=sys.stderr)
+            sys.exit(1)
+    r = api_post(url, key, "heartbeat", {"room_id": s["room_id"], "player_token": tok})
+    print(json.dumps(r, indent=2))
+    if r.get("error"):
+        sys.exit(1)
+
+
+def cmd_start() -> None:
+    url, key = get_url_and_key()
+    s = need_room(load_session())
+    sec = s.get("host_secret")
+    if not sec:
+        print(
+            "No host_secret in session. start-round must be run on the host machine\n"
+            "(the same one that ran `shame-mp create`).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    r = api_post(
+        url,
+        key,
+        "start-round",
+        {"room_id": s["room_id"], "host_secret": sec},
+    )
+    print(json.dumps(r, indent=2))
+    if r.get("error"):
+        sys.exit(1)
+    round_obj = r.get("round") or {}
+    s["last_round_id"] = round_obj.get("id")
+    s["last_victim_player_id"] = round_obj.get("victim_player_id")
+    save_session(s)
+
+
+def cmd_submit(status: str, detail: str) -> None:
+    url, key = get_url_and_key()
+    s = need_room(load_session())
+    rid = s.get("last_round_id")
+    victim = s.get("last_victim_player_id")
+    if not rid or not victim:
+        print("No round in session. Host runs: shame-mp start", file=sys.stderr)
+        sys.exit(1)
+    host_id = s.get("host_player_id")
+    guest_id = s.get("guest_player_id")
+    if victim == host_id:
+        tok = s.get("host_player_token")
+    elif guest_id and victim == guest_id:
+        tok = s.get("guest_player_token")
+    else:
+        print(
+            "Victim id does not match host/guest in this session. Use curl with API.md.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if not tok:
+        sys.exit(1)
+    if status not in ("ok", "skipped", "error"):
+        print("status must be ok | skipped | error", file=sys.stderr)
+        sys.exit(1)
+    r = api_post(
+        url,
+        key,
+        "submit-result",
+        {
+            "room_id": s["room_id"],
+            "player_token": tok,
+            "round_id": rid,
+            "result_status": status,
+            "result_detail": detail or None,
+        },
+    )
+    print(json.dumps(r, indent=2))
+    if r.get("error"):
+        sys.exit(1)
+
+
+def cmd_state(role: str) -> None:
+    url, key = get_url_and_key()
+    s = need_room(load_session())
+    if role == "host":
+        tok = s["host_player_token"]
+    else:
+        tok = s.get("guest_player_token")
+        if not tok:
+            print("No guest. Run: shame-mp join …", file=sys.stderr)
+            sys.exit(1)
+    r = api_post(url, key, "room-state", {"room_id": s["room_id"], "player_token": tok})
+    print(json.dumps(r, indent=2))
+
+
+def cmd_close() -> None:
+    url, key = get_url_and_key()
+    s = need_room(load_session())
+    sec = s.get("host_secret")
+    if not sec:
+        print("No host_secret. Only the host can close.", file=sys.stderr)
+        sys.exit(1)
+    r = api_post(
+        url,
+        key,
+        "close-room",
+        {"room_id": s["room_id"], "host_secret": sec},
+    )
+    print(json.dumps(r, indent=2))
+
+
+def cmd_url() -> None:
+    url, _ = get_url_and_key()
+    print(url)
+    print(f"{url}/functions/v1/")
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(0)
+    cmd = sys.argv[1]
+    if cmd == "create":
+        cmd_create(sys.argv[2] if len(sys.argv) > 2 else "Host")
+    elif cmd == "join":
+        if len(sys.argv) < 3:
+            print("usage: shame-mp join <SHORT_CODE> [display_name]", file=sys.stderr)
+            sys.exit(1)
+        cmd_join(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "Guest")
+    elif cmd in ("hb-host", "heartbeat-host"):
+        cmd_heartbeat("host")
+    elif cmd in ("hb-guest", "heartbeat-guest"):
+        cmd_heartbeat("guest")
+    elif cmd == "start":
+        cmd_start()
+    elif cmd == "submit":
+        if len(sys.argv) < 3:
+            print('usage: shame-mp submit ok|skipped|error ["detail"]', file=sys.stderr)
+            sys.exit(1)
+        cmd_submit(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "")
+    elif cmd == "state":
+        cmd_state("guest" if len(sys.argv) > 2 and sys.argv[2] == "guest" else "host")
+    elif cmd == "close":
+        cmd_close()
+    elif cmd == "url":
+        cmd_url()
+    else:
+        print("Unknown command:", cmd, file=sys.stderr)
+        print(__doc__)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

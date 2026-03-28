@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateMessage } from "@/lib/azure";
+import { generateRitualMessage } from "@/lib/azure";
 
 export async function POST(req: NextRequest) {
-  const { tone = "casual" } = await req.json();
+  const { ritualPrompt, username } = await req.json();
+
+  if (!ritualPrompt || !username) {
+    return NextResponse.json({ error: "ritualPrompt and username required" }, { status: 400 });
+  }
 
   try {
-    const message = await generateMessage(tone);
+    const message = await generateRitualMessage(ritualPrompt, username);
     return NextResponse.json({ ok: true, message });
   } catch (e) {
     console.error("[API] Message generation failed:", e);
