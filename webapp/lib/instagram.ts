@@ -204,7 +204,17 @@ export async function getSuggestedUsers(
 ): Promise<IGProfile[]> {
   const url = `${BASE}/api/v1/discover/ayml/`;
   const resp = await igFetch(url, session);
-  const data = await resp.json();
+  const text = await resp.text();
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.warn(
+      "[getSuggestedUsers] Invalid JSON response, length:",
+      text.length,
+    );
+    return [];
+  }
 
   const groups = data?.groups || [];
   const users: IGProfile[] = [];

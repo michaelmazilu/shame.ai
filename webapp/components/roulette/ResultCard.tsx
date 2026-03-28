@@ -31,13 +31,14 @@ interface ResultCardProps {
   message: string;
   messageLoading: boolean;
   error: string;
+  solo?: boolean;
   onMessageChange: (msg: string) => void;
   onReroll: () => void;
   onSend: () => void;
 }
 
 export default function ResultCard({
-  victim, ritual, target, message, messageLoading, error, onMessageChange, onReroll, onSend,
+  victim, ritual, target, message, messageLoading, error, solo, onMessageChange, onReroll, onSend,
 }: ResultCardProps) {
   return (
     <motion.div
@@ -49,10 +50,16 @@ export default function ResultCard({
     >
       {/* Summary pills */}
       <div className="flex items-center justify-center gap-3 mb-3 flex-wrap">
-        <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
-          <Avatar user={victim} size="md" />
-          <span className="text-sm font-semibold text-zinc-800">@{victim.username}</span>
-        </div>
+        {solo ? (
+          <div className="flex items-center gap-2 bg-rose/10 border border-rose/20 rounded-full px-3 py-1.5">
+            <span className="text-sm font-bold text-rose">You</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
+            <Avatar user={victim} size="md" />
+            <span className="text-sm font-semibold text-zinc-800">@{victim.username}</span>
+          </div>
+        )}
         <span className="text-2xl">{ritual.emoji}</span>
         <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
           <span className="text-sm text-zinc-400">→</span>
