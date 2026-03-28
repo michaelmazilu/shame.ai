@@ -6,6 +6,10 @@ Calls your Supabase Edge Functions using **`.env.local`** (publishable key only)
 
 Set **`SUPABASE_URL`** and your publishable key in repo root **`.env.local`** (see root `.env.example`).
 
+Optional: **`MP_IG_USERNAME`** or **`IG_USERNAME`** — sent as `ig_username` on `create` / `join` (same field the web lobby sends after Instagram login).
+
+Smoke test (needs network + deployed functions): `python3 test/test_mp_edge.py` (join uses a second synthetic `ig_username` so `start-round` can pick a target).
+
 ### One-time
 
 1. Repo root has **`.env.local`** with `SUPABASE_PUBLISHABLE_KEY=...` (and optional `SUPABASE_URL`).

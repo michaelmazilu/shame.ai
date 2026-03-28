@@ -10,6 +10,7 @@ export type RoomState = {
     id: string;
     role: string;
     display_name: string | null;
+    ig_username?: string | null;
     last_seen_at: string;
     joined_at: string;
   }>;

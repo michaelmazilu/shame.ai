@@ -40,7 +40,7 @@ Optional profile fields same as create-room.
 
 ## `POST /heartbeat`
 
-Marks the player as **ready** (seen within the last **90s** for `start-round`).
+Marks the player as **ready** (seen within the last **180s** for `start-round`).
 
 **Body:** `{ "room_id", "player_token" }`
 
@@ -53,11 +53,18 @@ Marks the player as **ready** (seen within the last **90s** for `start-round`).
 
 **Host only.** Body: `{ "room_id", "host_secret" }`
 
-Picks a **ready** player at random and a **weighted** deed from `deed_templates`.
+Picks a **ready** player at random (victim) and a **weighted** deed from `deed_templates`.
+
+For **`dm_random`**, **`follow_user`**, **`unfollow_user`**, the server **merges** into `deed.params`:
+
+- `target_username`, `target_display_name` — a random **other** ready player who has `ig_username` set (web lobby sends this on create/join).
+- `dm_text` — for `dm_random`, defaults to a short line if the template omits it.
+
+If no other ready player has `ig_username`, returns **400** `no_other_player_with_ig`.
 
 **200:** `{ round: { id, round_index, victim_player_id, deed, status, created_at } }`  
 **403:** `forbidden_invalid_host_secret`  
-**400:** `no_eligible_players_ready`, `room_closed`
+**400:** `no_eligible_players_ready`, `room_closed`, `no_other_player_with_ig`
 
 ---
 

@@ -30,8 +30,31 @@ export async function mpFetch<T = unknown>(
   } catch {
     throw new Error(text || `http_${res.status}`);
   }
-  const obj = data as { error?: string; detail?: string };
+  const obj = data as {
+    error?: string;
+    detail?: string;
+    ready_within_seconds?: number;
+  };
   if (!res.ok) {
+    if (
+      obj.error === "no_eligible_players_ready" &&
+      obj.ready_within_seconds != null
+    ) {
+      throw new Error(
+        `No active players in the last ${obj.ready_within_seconds}s (heartbeats). Wait a few seconds after joining, then try again — the page refreshes presence automatically.`,
+      );
+    }
+    if (obj.error === "no_deed_templates") {
+      throw new Error(
+        "Server has no deed deck yet. Run Supabase migrations / seed (deed_templates) on your project.",
+      );
+    }
+    if (obj.error === "no_other_player_with_ig") {
+      throw new Error(
+        obj.detail ||
+          "Need at least two players with Instagram usernames in the room for this deed.",
+      );
+    }
     throw new Error(obj.detail || obj.error || `http_${res.status}`);
   }
   return data as T;

@@ -2,15 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
 import {
-  demoCreateRoom,
-  demoJoinByCode,
-  demoJoinSecondPlayer,
-  demoRoomStateFromSession,
-  demoStartRound,
-  demoSubmitResult,
-} from "@/lib/multiplayer-demo";
+  deedNeedsInstagramAction,
+  executeDeedOnInstagram,
+} from "@/lib/mp-deed-execute";
+import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
 import type { RoomState } from "@/lib/multiplayer-types";
 import {
   loadSession,
@@ -22,27 +18,27 @@ import {
   type MpSession,
 } from "@/lib/multiplayer-session";
 
-function PreviewBanner() {
-  return (
-    <p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 text-center leading-relaxed">
-      <strong>Preview mode</strong> — you&apos;re seeing the same room UI locally. Add
-      Supabase keys (see <code className="text-[10px]">webapp/.env.example</code>)
-      for a real synced room with others.
-    </p>
-  );
-}
+const POLL_MS = 2500;
+const HEARTBEAT_MS = 12000;
 
-export default function MultiplayerLobby() {
+type Props = {
+  igUsername: string;
+};
+
+export default function MultiplayerLobby({ igUsername }: Props) {
   const [serverLive, setServerLive] = useState<boolean | null>(null);
   const [session, setSession] = useState<MpSession | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [runBusy, setRunBusy] = useState(false);
 
-  const [createName, setCreateName] = useState("Host");
+  const [createName, setCreateName] = useState(igUsername);
   const [joinCode, setJoinCode] = useState("");
-  const [joinName, setJoinName] = useState("Guest");
-  const [secondName, setSecondName] = useState("Guest2");
+  const [joinName, setJoinName] = useState(igUsername);
+  const [secondName, setSecondName] = useState(`${igUsername} (2)`);
+
+  const igBody = { ig_username: igUsername };
 
   useEffect(() => {
     let cancelled = false;
@@ -50,41 +46,14 @@ export default function MultiplayerLobby() {
       const ok = await getMultiplayerServerReady();
       if (cancelled) return;
       setServerLive(ok);
-      setSession(loadSession({ demo: !ok }));
+      if (ok) setSession(loadSession());
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const preview = serverLive === false;
-
-  const refreshState = useCallback(
-    async (s: MpSession) => {
-      if (preview) {
-        setRoomState((prev) => {
-          if (prev?.room.id === s.room_id) return prev;
-          return demoRoomStateFromSession(s);
-        });
-        return;
-      }
-      const tok = myPlayerToken(s);
-      if (!tok) return;
-      try {
-        const data = await mpFetch<RoomState>("room-state", {
-          room_id: s.room_id,
-          player_token: tok,
-        });
-        setRoomState(data);
-      } catch {
-        /* ignore poll errors */
-      }
-    },
-    [preview],
-  );
-
   const pulseHeartbeat = useCallback(async (s: MpSession) => {
-    if (preview) return;
     const tasks: Promise<unknown>[] = [];
     if (s.host_player_token) {
       tasks.push(
@@ -115,34 +84,44 @@ export default function MultiplayerLobby() {
     } catch {
       /* non-fatal */
     }
-  }, [preview]);
+  }, []);
+
+  const refreshState = useCallback(
+    async (s: MpSession) => {
+      const tok = myPlayerToken(s);
+      if (!tok) return;
+      try {
+        const data = await mpFetch<RoomState>("room-state", {
+          room_id: s.room_id,
+          player_token: tok,
+        });
+        setRoomState(data);
+        await pulseHeartbeat(s);
+      } catch {
+        /* ignore poll errors */
+      }
+    },
+    [pulseHeartbeat],
+  );
 
   useEffect(() => {
     if (!session) return;
     refreshState(session);
-    if (preview) return;
-    const poll = window.setInterval(() => refreshState(session), 4000);
+    const poll = window.setInterval(() => refreshState(session), POLL_MS);
     return () => clearInterval(poll);
-  }, [session, refreshState, preview]);
+  }, [session, refreshState]);
 
   useEffect(() => {
-    if (!session || preview) return;
+    if (!session) return;
     pulseHeartbeat(session);
-    const hb = window.setInterval(() => pulseHeartbeat(session), 35000);
+    const hb = window.setInterval(() => pulseHeartbeat(session), HEARTBEAT_MS);
     return () => clearInterval(hb);
-  }, [session, pulseHeartbeat, preview]);
+  }, [session, pulseHeartbeat]);
 
   async function onCreate() {
     setErr("");
     setBusy(true);
     try {
-      if (preview) {
-        const { session: s, roomState: rs } = demoCreateRoom(createName);
-        saveSession(s, { demo: true });
-        setSession(s);
-        setRoomState(rs);
-        return;
-      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -150,7 +129,10 @@ export default function MultiplayerLobby() {
         host_secret: string;
         player_token: string;
         host_player_id: string;
-      }>("create-room", { display_name: createName.trim() || "Host" });
+      }>("create-room", {
+        display_name: createName.trim() || igUsername,
+        ...igBody,
+      });
       const s: MpSession = {
         room_id: r.room_id,
         short_code: r.short_code,
@@ -159,7 +141,7 @@ export default function MultiplayerLobby() {
         host_player_token: r.player_token,
         host_player_id: r.host_player_id,
         role: "host",
-        display_name: createName.trim() || "Host",
+        display_name: createName.trim() || igUsername,
       };
       saveSession(s);
       setSession(s);
@@ -176,18 +158,6 @@ export default function MultiplayerLobby() {
     setErr("");
     setBusy(true);
     try {
-      if (preview) {
-        if (!roomState) return;
-        const { session: s, roomState: rs } = demoJoinSecondPlayer(
-          session,
-          roomState,
-          secondName,
-        );
-        saveSession(s, { demo: true });
-        setSession(s);
-        setRoomState(rs);
-        return;
-      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -195,9 +165,10 @@ export default function MultiplayerLobby() {
         player_id: string;
       }>("join-room", {
         short_code: session.short_code,
-        display_name: secondName.trim() || "Guest2",
+        display_name: secondName.trim() || `${igUsername} (2)`,
+        ...igBody,
       });
-      const prev = loadSession({ demo: false });
+      const prev = loadSession();
       const s = applyJoinToSession(prev, r, secondName.trim() || "Guest2");
       saveSession(s);
       setSession(s);
@@ -218,13 +189,6 @@ export default function MultiplayerLobby() {
         setErr("Enter a room code");
         return;
       }
-      if (preview) {
-        const { session: s, roomState: rs } = demoJoinByCode(code, joinName);
-        saveSession(s, { demo: true });
-        setSession(s);
-        setRoomState(rs);
-        return;
-      }
       const r = await mpFetch<{
         room_id: string;
         short_code: string;
@@ -232,10 +196,11 @@ export default function MultiplayerLobby() {
         player_id: string;
       }>("join-room", {
         short_code: code,
-        display_name: joinName.trim() || "Guest",
+        display_name: joinName.trim() || igUsername,
+        ...igBody,
       });
-      const prev = loadSession({ demo: false });
-      const s = applyJoinToSession(prev, r, joinName.trim() || "Guest");
+      const prev = loadSession();
+      const s = applyJoinToSession(prev, r, joinName.trim() || igUsername);
       saveSession(s);
       setSession(s);
       await refreshState(s);
@@ -254,11 +219,7 @@ export default function MultiplayerLobby() {
     setErr("");
     setBusy(true);
     try {
-      if (preview) {
-        if (!roomState) return;
-        setRoomState(demoStartRound(session, roomState));
-        return;
-      }
+      await pulseHeartbeat(session);
       await mpFetch("start-round", {
         room_id: session.room_id,
         host_secret: session.host_secret,
@@ -286,10 +247,6 @@ export default function MultiplayerLobby() {
     setBusy(true);
     setErr("");
     try {
-      if (preview && roomState) {
-        setRoomState(demoSubmitResult(roomState, result, detail));
-        return;
-      }
       await mpFetch("submit-result", {
         room_id: session.room_id,
         player_token: tok,
@@ -305,17 +262,39 @@ export default function MultiplayerLobby() {
     }
   }
 
+  async function runPunishmentOnInstagram() {
+    if (!session || !roomState?.latest_round) return;
+    const lr = roomState.latest_round;
+    if (lr.status !== "assigned") return;
+    const tok = tokenForVictim(session, lr.victim_player_id);
+    if (!tok) {
+      setErr("You are not the victim for this round.");
+      return;
+    }
+    setRunBusy(true);
+    setErr("");
+    try {
+      const r = await executeDeedOnInstagram({
+        type: lr.deed.type,
+        params: (lr.deed.params || {}) as Record<string, unknown>,
+      });
+      if (r.ok) {
+        await onSubmit("ok", r.detail);
+      } else {
+        setErr(r.detail);
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Instagram action failed");
+    } finally {
+      setRunBusy(false);
+    }
+  }
+
   async function onCloseRoom() {
     if (!session?.host_secret) return;
     setBusy(true);
     setErr("");
     try {
-      if (preview) {
-        clearSession({ demo: true });
-        setSession(null);
-        setRoomState(null);
-        return;
-      }
       await mpFetch("close-room", {
         room_id: session.room_id,
         host_secret: session.host_secret,
@@ -331,7 +310,7 @@ export default function MultiplayerLobby() {
   }
 
   function onLeave() {
-    clearSession({ demo: preview });
+    clearSession();
     setSession(null);
     setRoomState(null);
     setErr("");
@@ -345,29 +324,50 @@ export default function MultiplayerLobby() {
     );
   }
 
+  if (!serverLive) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
+        <p className="text-zinc-600 text-sm font-medium">
+          Multiplayer server not configured
+        </p>
+        <p className="text-zinc-500 text-xs leading-relaxed">
+          Add Supabase keys so the room can sync (Edge Functions). You&apos;re
+          signed in as{" "}
+          <strong className="text-zinc-700">@{igUsername}</strong>.
+        </p>
+        <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
+          {`SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=`}
+        </pre>
+        <p className="text-xs text-zinc-400">
+          Repo root <code className="text-[10px]">.env.local</code> is loaded when
+          you run dev from <code className="text-[10px]">webapp/</code>. See{" "}
+          <code className="text-[10px]">webapp/.env.example</code>. Restart{" "}
+          <code className="text-[10px]">npm run dev</code>.
+        </p>
+        <Link href="/" className="text-rose text-sm font-medium inline-block">
+          ← Back home
+        </Link>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="max-w-xl mx-auto px-4 py-10 space-y-10">
-        <div className="text-center space-y-3">
+        <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">
             Group <span className="text-rose">room</span>
           </h1>
-          <p className="text-sm text-zinc-500 mt-2">
-            {preview ? (
-              <>
-                Try create / join below — same screen as the live room. Real
-                multiplayer uses Supabase (
-                <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
-                ).
-              </>
-            ) : (
-              <>
-                Realtime punishments via Supabase — same API as{" "}
-                <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
-              </>
-            )}
+          <p className="text-xs text-zinc-500">
+            Signed in as <span className="font-medium text-zinc-700">@{igUsername}</span>{" "}
+            — punishments use this Instagram account.
           </p>
-          {preview && <PreviewBanner />}
+          <p className="text-sm text-zinc-500 mt-2">
+            Live room synced via Supabase (same API as{" "}
+            <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
+            ).
+          </p>
         </div>
 
         {err && (
@@ -444,14 +444,17 @@ export default function MultiplayerLobby() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
-      <header className="flex items-center justify-between">
-        <Link href="/" className="text-sm font-bold text-zinc-900">
-          shame<span className="text-rose">.ai</span>
-        </Link>
+      <header className="flex items-center justify-between gap-3">
+        <div>
+          <Link href="/" className="text-sm font-bold text-zinc-900">
+            shame<span className="text-rose">.ai</span>
+          </Link>
+          <p className="text-[10px] text-zinc-400 mt-0.5">@{igUsername}</p>
+        </div>
         <button
           type="button"
           onClick={onLeave}
-          className="text-xs text-zinc-400 hover:text-zinc-900"
+          className="text-xs text-zinc-400 hover:text-zinc-900 shrink-0"
         >
           Leave session
         </button>
@@ -462,8 +465,6 @@ export default function MultiplayerLobby() {
           {err}
         </p>
       )}
-
-      {preview && <PreviewBanner />}
 
       <div className="bg-white border border-beige rounded-2xl p-5 shadow-sm space-y-3">
         <p className="text-xs font-semibold text-gold uppercase tracking-wider">
@@ -519,7 +520,8 @@ export default function MultiplayerLobby() {
           {!session.guest_player_token && (
             <div className="bg-beige/40 border border-beige rounded-xl p-4 space-y-2">
               <p className="text-xs font-medium text-zinc-600">
-                Same device — add a 2nd player (tests two heartbeats)
+                Same device — add a 2nd player (two heartbeats, same IG account is ok
+                for testing)
               </p>
               <input
                 className="w-full border border-beige rounded-lg px-3 py-2 text-sm"
@@ -552,33 +554,69 @@ export default function MultiplayerLobby() {
             Active round #{lr.round_index}
           </p>
           <p className="text-lg font-semibold text-zinc-900">{lr.deed.type}</p>
-          <p className="text-sm text-zinc-600">
-            {String(
-              (lr.deed.params as { hint?: string })?.hint ||
-                JSON.stringify(lr.deed.params),
-            )}
-          </p>
+          {(() => {
+            const dp = lr.deed.params as {
+              hint?: string;
+              target_username?: string;
+              target_display_name?: string;
+              dm_text?: string;
+            };
+            return (
+              <>
+                {dp.target_username ? (
+                  <p className="text-sm font-medium text-zinc-800">
+                    Target:{" "}
+                    <span className="text-rose">@{dp.target_username}</span>
+                    {dp.target_display_name &&
+                    dp.target_display_name !== dp.target_username
+                      ? ` (${dp.target_display_name})`
+                      : null}
+                  </p>
+                ) : null}
+                {lr.deed.type === "dm_random" && dp.dm_text ? (
+                  <p className="text-xs text-zinc-500 font-mono bg-white/60 rounded px-2 py-1 border border-beige/50">
+                    DM text: {dp.dm_text}
+                  </p>
+                ) : null}
+                <p className="text-sm text-zinc-600">
+                  {String(dp.hint || JSON.stringify(lr.deed.params))}
+                </p>
+              </>
+            );
+          })()}
           <p className="text-xs text-zinc-400">
             Victim player id: {lr.victim_player_id.slice(0, 8)}…
           </p>
           {imVictim ? (
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onSubmit("ok", "done from web")}
-                className="py-2 px-4 rounded-full bg-zinc-900 text-white text-sm"
-              >
-                Mark done
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => onSubmit("skipped", "skipped")}
-                className="py-2 px-4 rounded-full border border-beige text-sm"
-              >
-                Skip
-              </button>
+            <div className="space-y-3 pt-2">
+              {deedNeedsInstagramAction(lr.deed.type) ? (
+                <button
+                  type="button"
+                  disabled={busy || runBusy}
+                  onClick={() => void runPunishmentOnInstagram()}
+                  className="w-full py-3 rounded-full bg-rose text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {runBusy ? "Talking to Instagram…" : "Run on Instagram"}
+                </button>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy || runBusy}
+                  onClick={() => onSubmit("ok", "done manually")}
+                  className="py-2 px-4 rounded-full bg-zinc-900 text-white text-sm"
+                >
+                  Mark done (manual)
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || runBusy}
+                  onClick={() => onSubmit("skipped", "skipped")}
+                  className="py-2 px-4 rounded-full border border-beige text-sm"
+                >
+                  Skip
+                </button>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-zinc-500 italic">
@@ -608,6 +646,9 @@ export default function MultiplayerLobby() {
               <span>
                 {p.display_name || "Anonymous"}{" "}
                 <span className="text-zinc-400">({p.role})</span>
+                {p.ig_username ? (
+                  <span className="text-zinc-400 text-xs"> @{p.ig_username}</span>
+                ) : null}
               </span>
               <span className="text-xs text-zinc-400">
                 {p.id.slice(0, 6)}…
@@ -621,7 +662,9 @@ export default function MultiplayerLobby() {
       </div>
 
       <p className="text-center text-xs text-zinc-400">
-        Extension: use Instagram for real actions; this page is the lobby only.
+        Victims can use <strong className="text-zinc-500">Run on Instagram</strong>{" "}
+        (uses your shame.ai login) or do it in the app / extension and tap Mark
+        done.
       </p>
     </div>
   );

@@ -2,7 +2,8 @@ import { corsHeaders, jsonRes } from "../../_shared/cors.ts";
 import { sha256Hex } from "../../_shared/crypto.ts";
 import { serviceClient } from "../../_shared/supabase.ts";
 
-const READY_SECONDS = 90;
+/** Players must have heartbeated within this window (host + guests). */
+const READY_SECONDS = 180;
 
 function weightedPick<T extends { weight: number }>(items: T[]): T {
   const tw = items.reduce((s, i) => s + i.weight, 0);
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
   const cutoff = new Date(Date.now() - READY_SECONDS * 1000).toISOString();
   const { data: players, error: pErr } = await supabase
     .from("room_players")
-    .select("id, last_seen_at")
+    .select("id, last_seen_at, ig_username, display_name")
     .eq("room_id", body.room_id)
     .gte("last_seen_at", cutoff);
 
@@ -81,14 +82,49 @@ Deno.serve(async (req) => {
   }
 
   const deedRow = weightedPick(templates);
+  const shuffled = shuffle(players);
+  const victim = shuffled[Math.floor(Math.random() * shuffled.length)]!;
+
+  const NEEDS_IG_TARGET = new Set(["dm_random", "follow_user", "unfollow_user"]);
+  const baseParams =
+    typeof deedRow.params === "object" && deedRow.params !== null
+      ? { ...(deedRow.params as Record<string, unknown>) }
+      : {};
+
+  let params: Record<string, unknown> = baseParams;
+  if (NEEDS_IG_TARGET.has(deedRow.deed_type)) {
+    const others = players.filter(
+      (p) => p.id !== victim.id && p.ig_username && String(p.ig_username).trim(),
+    );
+    if (others.length === 0) {
+      return jsonRes(
+        {
+          error: "no_other_player_with_ig",
+          detail:
+            "This deed needs another player in the room with an Instagram username (join/create after IG login).",
+        },
+        400,
+      );
+    }
+    const target = others[Math.floor(Math.random() * others.length)]!;
+    params = {
+      ...baseParams,
+      target_username: target.ig_username,
+      target_display_name: target.display_name ?? target.ig_username,
+    };
+    if (deedRow.deed_type === "dm_random") {
+      const dt = params.dm_text;
+      if (typeof dt !== "string" || !dt.trim()) {
+        params.dm_text = "👋 from shame.ai group room";
+      }
+    }
+  }
+
   const deed = {
     template_id: deedRow.id,
     type: deedRow.deed_type,
-    params: deedRow.params,
+    params,
   };
-
-  const shuffled = shuffle(players);
-  const victim = shuffled[Math.floor(Math.random() * shuffled.length)]!;
 
   const { data: lastRound } = await supabase
     .from("rounds")
