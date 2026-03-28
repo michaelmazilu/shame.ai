@@ -57,14 +57,10 @@ export function useTargetPool(): TargetPool {
     if (isInitial) setLoading(true);
 
     try {
-      const resp = await fetch("/api/following", {
+      const resp = await fetch("/api/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          count: POOL_SIZE,
-          exclude: Array.from(seenRef.current),
-          maxId: cursorRef.current,
-        }),
+        body: JSON.stringify({ seen: Array.from(seenRef.current) }),
       });
 
       if (resp.status === 401) {
@@ -74,13 +70,13 @@ export function useTargetPool(): TargetPool {
 
       const data = await resp.json();
       if (!data.profiles?.length && isInitial) {
-        setError("No accounts found in your following list");
+        setError("No mutual followers found");
         return;
       }
 
       const newProfiles: IGProfile[] = data.profiles || [];
-      cursorRef.current = data.nextMaxId || null;
-      hasMoreRef.current = !!data.hasMore;
+      cursorRef.current = null;
+      hasMoreRef.current = false;
 
       for (const p of newProfiles) seenRef.current.add(p.id);
 
@@ -117,20 +113,23 @@ export function useTargetPool(): TargetPool {
     }
   }, [fetchBatch]);
 
-  const markUsed = useCallback((id: string) => {
-    usedCountRef.current++;
+  const markUsed = useCallback(
+    (id: string) => {
+      usedCountRef.current++;
 
-    setTargets((prev) => {
-      const filtered = prev.filter((p) => p.id !== id);
-      saveJson(STORAGE_KEY, filtered);
-      return filtered;
-    });
+      setTargets((prev) => {
+        const filtered = prev.filter((p) => p.id !== id);
+        saveJson(STORAGE_KEY, filtered);
+        return filtered;
+      });
 
-    if (usedCountRef.current >= REFILL_THRESHOLD) {
-      usedCountRef.current = 0;
-      fetchBatch(false);
-    }
-  }, [fetchBatch]);
+      if (usedCountRef.current >= REFILL_THRESHOLD) {
+        usedCountRef.current = 0;
+        fetchBatch(false);
+      }
+    },
+    [fetchBatch],
+  );
 
   const clearPool = useCallback(() => {
     setTargets([]);

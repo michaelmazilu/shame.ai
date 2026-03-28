@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import Roulette from "@/components/roulette/Roulette";
 import GroupRoomPanel from "@/components/GroupRoomPanel";
+import UserProfileCard from "@/components/UserProfileCard";
 
 type AppStep = "pick-mode" | "group-room" | "playing";
 type GameMode = "solo" | "group";
@@ -42,7 +43,10 @@ export default function AppPage() {
         className="flex items-center justify-between px-5 py-2 bg-cream/80 backdrop-blur-md border-b border-beige/30 sticky top-0 z-20 relative"
       >
         {step === "pick-mode" ? (
-          <Link href="/" className="text-sm font-bold tracking-tight text-zinc-900">
+          <Link
+            href="/"
+            className="text-sm font-bold tracking-tight text-zinc-900"
+          >
             shame<span className="text-rose">.ai</span>
           </Link>
         ) : (
@@ -59,9 +63,24 @@ export default function AppPage() {
               {mode === "solo" ? "Solo" : "Group room"}
             </span>
           )}
-          <Link href="/history" className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full">History</Link>
-          <Link href="/settings" className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full">Settings</Link>
-          <Link href="/room" className="text-xs font-semibold text-white bg-rose hover:bg-rose-dark transition-colors px-4 py-1.5 rounded-full">Room</Link>
+          <Link
+            href="/history"
+            className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full"
+          >
+            History
+          </Link>
+          <Link
+            href="/settings"
+            className="text-xs font-semibold text-rose bg-rose/10 hover:bg-rose/20 transition-colors px-4 py-1.5 rounded-full"
+          >
+            Settings
+          </Link>
+          <Link
+            href="/room"
+            className="text-xs font-semibold text-white bg-rose hover:bg-rose-dark transition-colors px-4 py-1.5 rounded-full"
+          >
+            Room
+          </Link>
         </div>
       </motion.header>
 
@@ -74,8 +93,10 @@ export default function AppPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="flex-1 flex flex-col items-center justify-center px-6 gap-8"
+              className="flex-1 flex flex-col items-center justify-center px-6 gap-6"
             >
+              <UserProfileCard />
+
               <div className="text-center">
                 <motion.h1
                   initial={{ opacity: 0, y: -10 }}
@@ -100,7 +121,10 @@ export default function AppPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.25 }}
-                  whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(227,107,138,0.2)" }}
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 0 40px rgba(227,107,138,0.2)",
+                  }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startSolo}
                   className="w-full bg-white border-2 border-beige/60 rounded-2xl p-6 text-left hover:border-rose/40 transition-colors group"
@@ -122,7 +146,10 @@ export default function AppPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35 }}
-                  whileHover={{ scale: 1.02, boxShadow: "0 0 40px rgba(227,107,138,0.2)" }}
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: "0 0 40px rgba(227,107,138,0.2)",
+                  }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startGroup}
                   className="w-full bg-white border-2 border-beige/60 rounded-2xl p-6 text-left hover:border-rose/40 transition-colors group"
@@ -134,7 +161,8 @@ export default function AppPage() {
                         Group
                       </p>
                       <p className="text-sm text-zinc-400 mt-0.5">
-                        Create or join a room with a code. Synced multiplayer lobby.
+                        Create or join a room with a code. Synced multiplayer
+                        lobby.
                       </p>
                     </div>
                   </div>

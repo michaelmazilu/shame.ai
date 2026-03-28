@@ -12,3 +12,4 @@ server/.cache/
 server/output/
 .shame-ai-session.json
 secrets.js
+.gstack/

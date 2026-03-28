@@ -81,7 +81,21 @@
       "Bash(railway domain:*)",
       "Bash(railway logs:*)",
       "Bash(curl -s https://gregarious-spontaneity-production.up.railway.app/health)",
-      "Bash(vercel whoami:*)"
+      "Bash(vercel whoami:*)",
+<<<<<<< Updated upstream
+      "Bash(curl -s https://loyal-beauty-production-e437.up.railway.app/health)",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/webapp/app/app/**)"
+=======
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/owner/Downloads/coding projects/shame.ai/**)",
+      "Bash(done)",
+      "Bash(grep -r \"components/Roulette\\\\|from.*Roulette\\\\.tsx\\\\|import Roulette from ''''@/components/Roulette''''\" webapp --include=\"*.ts\" --include=\"*.tsx\")",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/webapp/app/app/**)",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/webapp/lib/**)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s https://loyal-beauty-production-e437.up.railway.app/health)"
+>>>>>>> Stashed changes
     ],
     "additionalDirectories": [
       "/Users/owner/.claude",

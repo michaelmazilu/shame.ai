@@ -20,7 +20,13 @@ function saveStorage(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-export type Phase = "idle" | "spinning" | "locked" | "result" | "sending" | "sent";
+export type Phase =
+  | "idle"
+  | "spinning"
+  | "locked"
+  | "result"
+  | "sending"
+  | "sent";
 
 export interface RouletteState {
   profiles: IGProfile[];
@@ -36,12 +42,13 @@ export interface RouletteState {
   messageLoading: boolean;
   error: string;
   statusText: string;
+  resultData: Record<string, unknown> | null;
   selectedVictimIndex: number;
   selectedRitualIndex: number;
   selectedTargetIndex: number;
   setMessage: (msg: string) => void;
   spin: () => void;
-  sendMessage: () => void;
+  executePunishment: () => void;
   reset: () => void;
   onVictimLocked: () => void;
   onRitualLocked: () => void;
@@ -72,6 +79,9 @@ export function useRouletteState(): RouletteState {
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState(pool.error);
   const [statusText, setStatusText] = useState("");
+  const [resultData, setResultData] = useState<Record<string, unknown> | null>(
+    null,
+  );
 
   const messageGenerated = useRef(false);
 
@@ -93,7 +103,19 @@ export function useRouletteState(): RouletteState {
       const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ritualPrompt: r.prompt, username: u.username }),
+        body: JSON.stringify({
+          ritualPrompt: r.prompt,
+          profile: {
+            username: u.username,
+            fullName: u.fullName,
+            bio: u.bio,
+            categoryName: u.categoryName,
+            recentCaptions: u.recentPosts
+              ?.slice(0, 3)
+              .map((p) => p.caption)
+              .filter(Boolean),
+          },
+        }),
       });
       const data = await resp.json();
       if (data.ok) setMessage(data.message);
@@ -111,6 +133,7 @@ export function useRouletteState(): RouletteState {
     setMessage("");
     setError("");
     setStatusText("");
+    setResultData(null);
     setVictimLocked(false);
     setRitualLocked(false);
     setTargetLocked(false);
@@ -137,74 +160,102 @@ export function useRouletteState(): RouletteState {
 
   const onRitualLocked = useCallback(() => {
     setRitualLocked(true);
-    // Fire message generation as soon as we know ritual + victim
-    if (!messageGenerated.current && ritual && victim) {
-      messageGenerated.current = true;
-      generateMsg(ritual, victim);
-    }
-  }, [ritual, victim]);
+  }, []);
 
   const onTargetLocked = useCallback(() => {
     setTargetLocked(true);
-  }, []);
+    // Only generate message for DM rituals that need editable text
+    if (!messageGenerated.current && ritual && target && ritual.needsMessage) {
+      messageGenerated.current = true;
+      generateMsg(ritual, target);
+    }
+  }, [ritual, target]);
 
   const rerollMessage = useCallback(() => {
-    if (ritual && victim) generateMsg(ritual, victim);
-  }, [ritual, victim]);
+    if (ritual && target && ritual.needsMessage) generateMsg(ritual, target);
+  }, [ritual, target]);
 
-  const sendMessage = useCallback(async () => {
-    if (!target || !message.trim()) return;
+  const executePunishment = useCallback(async () => {
+    if (!ritual || !victim) return;
+    if (ritual.needsMessage && !message.trim()) return;
     setPhase("sending");
     setStatusText("Delivering the shame...");
 
     try {
       const seen = loadStorage<string[]>("st_seen", []);
-      if (victim) seen.push(victim.id);
-      if (target.id !== victim?.id) seen.push(target.id);
+      seen.push(victim.id);
+      if (target && target.id !== victim.id) seen.push(target.id);
       saveStorage("st_seen", seen);
 
-      const relResp = await fetch("/api/relationship", {
+      const resp = await fetch("/api/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: target.id }),
+        body: JSON.stringify({
+          action: ritual.action,
+          victimId: victim.id,
+          victimUsername: victim.username,
+          targetId: target?.id,
+          targetUsername: target?.username,
+          message: ritual.needsMessage ? message : undefined,
+        }),
       });
-      const rel = await relResp.json();
 
-      if (rel.followedBy) {
-        const dmResp = await fetch("/api/dm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: target.id, text: message }),
-        });
-        const dm = await dmResp.json();
-        if (dm.success) {
-          setStatusText(`Shame delivered to @${target.username}`);
-          const history = loadStorage<{ profile: { id: string; username: string }; target: { id: string; username: string }; ritual: string; message: string; timestamp: number }[]>("st_shot_history", []);
-          history.unshift({
-            profile: { id: victim?.id || "", username: victim?.username || "" },
-            target: { id: target.id, username: target.username },
-            ritual: ritual?.name || "",
-            message,
-            timestamp: Date.now(),
-          });
-          if (history.length > 500) history.length = 500;
-          saveStorage("st_shot_history", history);
-        } else {
-          setStatusText("DM failed — they might have restricted messages");
+      const data = await resp.json();
+      setResultData(data);
+
+      if (data.success) {
+        switch (ritual.action) {
+          case "dm":
+            setStatusText(
+              `Shame delivered to @${target?.username || victim.username}`,
+            );
+            break;
+          case "dm_confession":
+            setStatusText(
+              `AI confession sent to @${target?.username || victim.username}`,
+            );
+            break;
+          case "comment":
+            setStatusText("Comment dropped on a random reel");
+            break;
+          case "send_reel":
+            setStatusText(
+              `Random reel sent to @${target?.username || victim.username}`,
+            );
+            break;
+          case "story_image":
+            setStatusText("AI meme posted to your story");
+            break;
+          case "story_reel":
+            setStatusText("Reel reposted to your story");
+            break;
+          case "story_video":
+            setStatusText("AI video generation started");
+            break;
         }
+
+        const history = loadStorage<
+          {
+            profile: { id: string; username: string };
+            target: { id: string; username: string };
+            ritual: string;
+            message: string;
+            timestamp: number;
+          }[]
+        >("st_shot_history", []);
+        history.unshift({
+          profile: { id: victim.id, username: victim.username },
+          target: { id: target?.id || "", username: target?.username || "" },
+          ritual: ritual.name,
+          message: message || ritual.description,
+          timestamp: Date.now(),
+        });
+        if (history.length > 500) history.length = 500;
+        saveStorage("st_shot_history", history);
       } else {
-        const followResp = await fetch("/api/follow", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: target.id, action: "follow" }),
-        });
-        const follow = await followResp.json();
-        if (follow.success) {
-          setStatusText(`Following @${target.username} — shame queued`);
-        } else {
-          setStatusText("Could not follow — try again");
-        }
+        setStatusText(data.error || "Something went wrong");
       }
+
       setPhase("sent");
     } catch {
       setStatusText("Something went wrong");
@@ -225,16 +276,35 @@ export function useRouletteState(): RouletteState {
     setMessage("");
     setError("");
     setStatusText("");
+    setResultData(null);
     messageGenerated.current = false;
   }, [victim, target, pool]);
 
   return {
-    profiles, loading, phase,
-    victim, ritual, target,
-    victimLocked, ritualLocked, targetLocked,
-    message, messageLoading, error, statusText,
-    selectedVictimIndex, selectedRitualIndex, selectedTargetIndex,
-    setMessage, spin, sendMessage, reset,
-    onVictimLocked, onRitualLocked, onTargetLocked, rerollMessage,
+    profiles,
+    loading,
+    phase,
+    victim,
+    ritual,
+    target,
+    victimLocked,
+    ritualLocked,
+    targetLocked,
+    message,
+    messageLoading,
+    error,
+    statusText,
+    resultData,
+    selectedVictimIndex,
+    selectedRitualIndex,
+    selectedTargetIndex,
+    setMessage,
+    spin,
+    executePunishment,
+    reset,
+    onVictimLocked,
+    onRitualLocked,
+    onTargetLocked,
+    rerollMessage,
   };
 }

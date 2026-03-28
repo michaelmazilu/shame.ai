@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { launchInstagramLogin } from "@/lib/browser-auth";
 import { hydrateInstagramUsername } from "@/lib/instagram";
 import { getSession } from "@/lib/session";
-import type { IGSession } from "@/lib/types";
+import { syncSessionToPython } from "@/lib/python-api";
 
 export const maxDuration = 300; // allow up to 5 minutes
 
@@ -26,10 +26,7 @@ async function loginViaPlaywrightServer(username: string, password: string) {
   if (!res.ok) {
     return { success: false, error: data.error || "Remote login failed" };
   }
-  return data as {
-    success: boolean;
-    session?: IGSession;
-  };
+  return data as { success: boolean; session: any };
 }
 
 export async function POST(request: NextRequest) {
@@ -62,6 +59,7 @@ export async function POST(request: NextRequest) {
     session.ig = result.session;
     await hydrateInstagramUsername(result.session);
     await session.save();
+    await syncSessionToPython(result.session);
 
     return NextResponse.json({
       success: true,

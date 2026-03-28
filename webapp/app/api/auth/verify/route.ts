@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hydrateInstagramUsername, verifyTwoFactor } from "@/lib/instagram";
 import { getSession } from "@/lib/session";
+import { syncSessionToPython } from "@/lib/python-api";
 
 export async function POST(req: NextRequest) {
   const { code, identifier, username, cookies, csrfToken } = await req.json();
@@ -9,16 +10,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing 2FA fields" }, { status: 400 });
   }
 
-  const result = await verifyTwoFactor(code, identifier, username, cookies, csrfToken);
+  const result = await verifyTwoFactor(
+    code,
+    identifier,
+    username,
+    cookies,
+    csrfToken,
+  );
 
   if (!result.success || !result.session) {
-    return NextResponse.json({ error: result.error || "Verification failed" }, { status: 401 });
+    return NextResponse.json(
+      { error: result.error || "Verification failed" },
+      { status: 401 },
+    );
   }
 
   const session = await getSession();
   session.ig = result.session;
   await hydrateInstagramUsername(result.session);
   await session.save();
+  await syncSessionToPython(result.session);
 
   return NextResponse.json({
     success: true,
