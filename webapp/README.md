@@ -2,13 +2,21 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Multiplayer lobby (`/room`)
 
-The **group room** UI calls Next.js **API routes** under `/api/mp/*`, which proxy to Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)). Supabase URL and publishable key stay **server-side** only (not in the browser bundle).
+**`/room` works without Supabase** in **preview mode** (same UI: create/join, rounds, players — local only). For real multiplayer with others, **add Supabase keys** (Dashboard → Settings → API) and run the app from `webapp/`:
 
-1. Easiest: keep Supabase vars in **repo root** `../.env.local` — `next.config.ts` loads that file when you run the app from `webapp/`, so `/room` works without duplicating keys.
-2. Or copy `webapp/.env.example` → `webapp/.env.local` and set `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` (or the older `NEXT_PUBLIC_SUPABASE_*` names; the API routes read them on the server only).
-3. `npm run dev` → open [http://localhost:3000/room](http://localhost:3000/room)
+```env
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
+```
 
-For production (e.g. Vercel), add the same `SUPABASE_*` variables in the project environment settings.
+Put them in **`webapp/.env.local`** or **repo root `.env.local`** (root is auto-loaded when you `npm run dev` from `webapp/`). Copy from [`webapp/.env.example`](./.env.example) if you like. Never commit `.env.local`.
+
+The lobby uses Next.js **`/api/mp/*`** routes, which call Supabase **Edge Functions** in [`../supabase/`](../supabase/) (same API as [`../scripts/shame-mp`](../scripts/shame-mp)).
+
+1. `cd webapp && npm run dev`
+2. Open [http://localhost:3000/room](http://localhost:3000/room)
+
+**Production:** set the same `SUPABASE_*` variables in your host (e.g. Vercel).
 
 The Chrome extension in the repo root stays separate; use the web lobby for rooms and the extension for Instagram actions when you wire them later.
 
