@@ -104,7 +104,7 @@ const col5 = testimonials.slice(12, 15);
 
 export default function Testimonials() {
   return (
-    <section className="bg-white border-y border-beige/40 py-20 relative overflow-hidden">
+    <section className="bg-cream-light border-y border-blush/30 py-20 relative overflow-hidden">
       <div className="z-10 mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
