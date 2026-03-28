@@ -70,7 +70,13 @@ Deno.serve(async (req) => {
     .gte("last_seen_at", cutoff);
 
   if (pErr || !players?.length) {
-    return jsonRes({ error: "no_eligible_players_ready", ready_within_seconds: READY_SECONDS }, 400);
+    return jsonRes(
+      {
+        error: "no_eligible_players_ready",
+        ready_within_seconds: READY_SECONDS,
+      },
+      400,
+    );
   }
 
   const { data: templates, error: tErr } = await supabase
@@ -150,7 +156,10 @@ Deno.serve(async (req) => {
 
   if (insErr || !round) {
     console.error(insErr);
-    return jsonRes({ error: "round_create_failed", detail: insErr?.message }, 500);
+    return jsonRes(
+      { error: "round_create_failed", detail: insErr?.message },
+      500,
+    );
   }
 
   await supabase
@@ -163,6 +172,8 @@ Deno.serve(async (req) => {
       id: round.id,
       round_index: round.round_index,
       victim_player_id: round.victim_player_id,
+      victim_ig_username: victim.ig_username || null,
+      victim_display_name: victim.display_name || null,
       deed: round.deed,
       status: round.status,
       created_at: round.created_at,

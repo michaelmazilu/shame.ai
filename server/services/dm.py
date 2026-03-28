@@ -5,11 +5,15 @@ Instagram DM sending via GraphQL.
 import json
 import random
 
-from server.dependencies import rate_limited_request, get_graphql_tokens
+from server.dependencies import rate_limited_request, get_graphql_tokens, refresh_graphql_tokens
 
 
 def send_dm(recipient_id, text):
-    """Send a text DM via GraphQL."""
+    """Send a text DM via GraphQL. Auto-refreshes tokens on failure."""
+    return _send_dm_with_tokens(recipient_id, text, retry=True)
+
+
+def _send_dm_with_tokens(recipient_id, text, retry=True):
     tokens = get_graphql_tokens()
     offline_id = str(random.randint(10**18, 9 * 10**18))
     variables = {
@@ -46,8 +50,27 @@ def send_dm(recipient_id, text):
             "x-fb-lsd": tokens["lsd"],
         },
     )
-    errors = data.get("errors", []) if isinstance(data, dict) else []
-    return {"success": status == 200 and len(errors) == 0, "status": status}
+
+    # Check for real success
+    if status != 200:
+        return {"success": False, "status": status, "error": "HTTP error"}
+
+    if not isinstance(data, dict) or data.get("raw"):
+        # Non-JSON response = stale tokens. Retry once with fresh tokens.
+        if retry:
+            refresh_graphql_tokens()
+            return _send_dm_with_tokens(recipient_id, text, retry=False)
+        return {"success": False, "status": status, "error": "Non-JSON response — tokens stale"}
+
+    errors = data.get("errors", [])
+    if errors:
+        error_msg = errors[0].get("message", str(errors[0])) if errors else "Unknown"
+        if retry:
+            refresh_graphql_tokens()
+            return _send_dm_with_tokens(recipient_id, text, retry=False)
+        return {"success": False, "status": status, "error": error_msg}
+
+    return {"success": True, "status": status}
 
 
 def send_reel_dm(recipient_id, reel_url, text=None):

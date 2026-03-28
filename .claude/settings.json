@@ -53,7 +53,22 @@
       "Bash(python test/test_all.py)",
       "Bash(.venv/bin/python test/test_all.py)",
       "Bash(.venv/bin/pip install:*)",
-      "Bash(python -c \"from server.main import app; print\\(f''Routes: {len\\(app.routes\\)}''\\)\")"
+      "Bash(python -c \"from server.main import app; print\\(f''Routes: {len\\(app.routes\\)}''\\)\")",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/server/**)",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/webapp/**)",
+      "Read(//Users/owner/Downloads/coding\\\\ projects/shame.ai/**)",
+      "Bash(.venv/bin/python -c \"from server.main import app; print\\(f''Routes: {[r.path for r in app.routes]}''\\)\")",
+      "Bash(npm run:*)",
+      "Bash(npx next:*)",
+      "Bash(./node_modules/.bin/next build:*)",
+      "Bash(npm install:*)",
+      "Bash(node test/test_new_ts_functions.js all)",
+      "Bash(node -e \":*)",
+      "Bash(node -e ':*)",
+      "Bash(node test/test_fresh_cookies.js)",
+      "Bash(.venv/bin/python test/punishment_bio.py)",
+      "Bash(.venv/bin/python test/punishment_pfp.py)",
+      "Bash(.venv/bin/python test/punishment_cringe_comment.py)"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude",

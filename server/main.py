@@ -7,7 +7,7 @@ Run with: uvicorn server.main:app --reload
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.routers import health, dm, story, comment, media, profile, lottery
+from server.routers import auth, health, dm, story, comment, media, profile, lottery
 
 app = FastAPI(title="shame.ai", description="Instagram lottery backend", version="0.1.0")
 
@@ -19,6 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(health.router)
 app.include_router(dm.router)
 app.include_router(story.router)

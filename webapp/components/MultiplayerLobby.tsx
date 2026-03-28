@@ -6,6 +6,12 @@ import {
   deedNeedsInstagramAction,
   executeDeedOnInstagram,
 } from "@/lib/mp-deed-execute";
+import {
+  getPunishmentById,
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  type PunishmentCategory,
+} from "@/lib/punishments";
 import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
 import type { RoomState } from "@/lib/multiplayer-types";
 import {
@@ -232,10 +238,7 @@ export default function MultiplayerLobby({ igUsername }: Props) {
     }
   }
 
-  async function onSubmit(
-    result: "ok" | "skipped" | "error",
-    detail: string,
-  ) {
+  async function onSubmit(result: "ok" | "skipped" | "error", detail: string) {
     if (!session || !roomState?.latest_round) return;
     const lr = roomState.latest_round;
     if (lr.status !== "assigned") return;
@@ -332,17 +335,16 @@ export default function MultiplayerLobby({ igUsername }: Props) {
         </p>
         <p className="text-zinc-500 text-xs leading-relaxed">
           Add Supabase keys so the room can sync (Edge Functions). You&apos;re
-          signed in as{" "}
-          <strong className="text-zinc-700">@{igUsername}</strong>.
+          signed in as <strong className="text-zinc-700">@{igUsername}</strong>.
         </p>
         <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
           {`SUPABASE_URL=
 SUPABASE_PUBLISHABLE_KEY=`}
         </pre>
         <p className="text-xs text-zinc-400">
-          Repo root <code className="text-[10px]">.env.local</code> is loaded when
-          you run dev from <code className="text-[10px]">webapp/</code>. See{" "}
-          <code className="text-[10px]">webapp/.env.example</code>. Restart{" "}
+          Repo root <code className="text-[10px]">.env.local</code> is loaded
+          when you run dev from <code className="text-[10px]">webapp/</code>.
+          See <code className="text-[10px]">webapp/.env.example</code>. Restart{" "}
           <code className="text-[10px]">npm run dev</code>.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
@@ -360,12 +362,15 @@ SUPABASE_PUBLISHABLE_KEY=`}
             Group <span className="text-rose">room</span>
           </h1>
           <p className="text-xs text-zinc-500">
-            Signed in as <span className="font-medium text-zinc-700">@{igUsername}</span>{" "}
-            — punishments use this Instagram account.
+            Signed in as{" "}
+            <span className="font-medium text-zinc-700">@{igUsername}</span> —
+            punishments use this Instagram account.
           </p>
           <p className="text-sm text-zinc-500 mt-2">
             Live room synced via Supabase (same API as{" "}
-            <code className="text-xs bg-beige px-1 rounded">scripts/shame-mp</code>
+            <code className="text-xs bg-beige px-1 rounded">
+              scripts/shame-mp
+            </code>
             ).
           </p>
         </div>
@@ -520,8 +525,8 @@ SUPABASE_PUBLISHABLE_KEY=`}
           {!session.guest_player_token && (
             <div className="bg-beige/40 border border-beige rounded-xl p-4 space-y-2">
               <p className="text-xs font-medium text-zinc-600">
-                Same device — add a 2nd player (two heartbeats, same IG account is ok
-                for testing)
+                Same device — add a 2nd player (two heartbeats, same IG account
+                is ok for testing)
               </p>
               <input
                 className="w-full border border-beige rounded-lg px-3 py-2 text-sm"
@@ -548,83 +553,108 @@ SUPABASE_PUBLISHABLE_KEY=`}
         </p>
       )}
 
-      {lr && lr.status === "assigned" && (
-        <div className="bg-cream-light border border-rose/30 rounded-2xl p-5 space-y-3">
-          <p className="text-xs font-semibold text-rose uppercase tracking-wider">
-            Active round #{lr.round_index}
-          </p>
-          <p className="text-lg font-semibold text-zinc-900">{lr.deed.type}</p>
-          {(() => {
-            const dp = lr.deed.params as {
-              hint?: string;
-              target_username?: string;
-              target_display_name?: string;
-              dm_text?: string;
-            };
-            return (
-              <>
-                {dp.target_username ? (
-                  <p className="text-sm font-medium text-zinc-800">
-                    Target:{" "}
-                    <span className="text-rose">@{dp.target_username}</span>
-                    {dp.target_display_name &&
-                    dp.target_display_name !== dp.target_username
-                      ? ` (${dp.target_display_name})`
-                      : null}
-                  </p>
-                ) : null}
-                {lr.deed.type === "dm_random" && dp.dm_text ? (
-                  <p className="text-xs text-zinc-500 font-mono bg-white/60 rounded px-2 py-1 border border-beige/50">
-                    DM text: {dp.dm_text}
-                  </p>
-                ) : null}
-                <p className="text-sm text-zinc-600">
-                  {String(dp.hint || JSON.stringify(lr.deed.params))}
+      {lr &&
+        lr.status === "assigned" &&
+        (() => {
+          const dp = (lr.deed.params || {}) as Record<string, unknown>;
+          const punishment = getPunishmentById(lr.deed.type);
+          const emoji =
+            (dp.emoji as string) || punishment?.emoji || "\u{1F3B2}";
+          const deedName =
+            (dp.name as string) || punishment?.name || lr.deed.type;
+          const description =
+            (dp.description as string) || punishment?.description || "";
+          const category = ((dp.category as string) ||
+            punishment?.category ||
+            "dm") as PunishmentCategory;
+          const targetUsername = dp.target_username as string | undefined;
+          const victimPlayer = roomState?.players.find(
+            (p) => p.id === lr.victim_player_id,
+          );
+
+          return (
+            <div className="bg-cream-light border border-rose/30 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-rose uppercase tracking-wider">
+                  Round #{lr.round_index}
                 </p>
-              </>
-            );
-          })()}
-          <p className="text-xs text-zinc-400">
-            Victim player id: {lr.victim_player_id.slice(0, 8)}…
-          </p>
-          {imVictim ? (
-            <div className="space-y-3 pt-2">
-              {deedNeedsInstagramAction(lr.deed.type) ? (
-                <button
-                  type="button"
-                  disabled={busy || runBusy}
-                  onClick={() => void runPunishmentOnInstagram()}
-                  className="w-full py-3 rounded-full bg-rose text-white text-sm font-semibold disabled:opacity-50"
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+                  style={{
+                    backgroundColor:
+                      CATEGORY_COLORS[category] || CATEGORY_COLORS.dm,
+                  }}
                 >
-                  {runBusy ? "Talking to Instagram…" : "Run on Instagram"}
-                </button>
-              ) : null}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busy || runBusy}
-                  onClick={() => onSubmit("ok", "done manually")}
-                  className="py-2 px-4 rounded-full bg-zinc-900 text-white text-sm"
-                >
-                  Mark done (manual)
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || runBusy}
-                  onClick={() => onSubmit("skipped", "skipped")}
-                  className="py-2 px-4 rounded-full border border-beige text-sm"
-                >
-                  Skip
-                </button>
+                  {CATEGORY_LABELS[category] || category}
+                </span>
               </div>
+
+              <div className="text-center space-y-2">
+                <p className="text-4xl">{emoji}</p>
+                <p className="text-xl font-bold text-zinc-900">{deedName}</p>
+                {description && (
+                  <p className="text-sm text-zinc-600">{description}</p>
+                )}
+              </div>
+
+              {targetUsername && (
+                <p className="text-sm font-medium text-zinc-800 text-center">
+                  Target: <span className="text-rose">@{targetUsername}</span>
+                </p>
+              )}
+
+              <div className="text-center text-xs text-zinc-400">
+                Victim:{" "}
+                <strong className="text-zinc-700">
+                  {victimPlayer?.display_name ||
+                    lr.victim_player_id.slice(0, 8)}
+                </strong>
+                {victimPlayer?.ig_username && (
+                  <span className="text-rose ml-1">
+                    @{victimPlayer.ig_username}
+                  </span>
+                )}
+              </div>
+
+              {imVictim ? (
+                <div className="space-y-3 pt-1">
+                  {deedNeedsInstagramAction(lr.deed.type) ? (
+                    <button
+                      type="button"
+                      disabled={busy || runBusy}
+                      onClick={() => void runPunishmentOnInstagram()}
+                      className="w-full py-3 rounded-full bg-rose text-white text-sm font-semibold disabled:opacity-50"
+                    >
+                      {runBusy ? "Executing..." : "Execute the Shame"}
+                    </button>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={busy || runBusy}
+                      onClick={() => onSubmit("ok", "done manually")}
+                      className="py-2 px-4 rounded-full bg-zinc-900 text-white text-sm"
+                    >
+                      Mark done (manual)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || runBusy}
+                      onClick={() => onSubmit("skipped", "skipped")}
+                      className="py-2 px-4 rounded-full border border-beige text-sm"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500 italic text-center">
+                  Waiting for the victim to execute the deed...
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-zinc-500 italic">
-              Waiting for the victim to complete the deed…
-            </p>
-          )}
-        </div>
-      )}
+          );
+        })()}
 
       {lr && lr.status !== "assigned" && (
         <div className="text-sm text-zinc-500 bg-beige/30 rounded-xl px-4 py-3">
@@ -647,12 +677,13 @@ SUPABASE_PUBLISHABLE_KEY=`}
                 {p.display_name || "Anonymous"}{" "}
                 <span className="text-zinc-400">({p.role})</span>
                 {p.ig_username ? (
-                  <span className="text-zinc-400 text-xs"> @{p.ig_username}</span>
+                  <span className="text-zinc-400 text-xs">
+                    {" "}
+                    @{p.ig_username}
+                  </span>
                 ) : null}
               </span>
-              <span className="text-xs text-zinc-400">
-                {p.id.slice(0, 6)}…
-              </span>
+              <span className="text-xs text-zinc-400">{p.id.slice(0, 6)}…</span>
             </li>
           ))}
           {!roomState?.players?.length && (
@@ -662,9 +693,9 @@ SUPABASE_PUBLISHABLE_KEY=`}
       </div>
 
       <p className="text-center text-xs text-zinc-400">
-        Victims can use <strong className="text-zinc-500">Run on Instagram</strong>{" "}
-        (uses your shame.ai login) or do it in the app / extension and tap Mark
-        done.
+        Victims can use{" "}
+        <strong className="text-zinc-500">Run on Instagram</strong> (uses your
+        shame.ai login) or do it in the app / extension and tap Mark done.
       </p>
     </div>
   );
