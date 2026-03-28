@@ -35,6 +35,21 @@ python3 test/test_followers.py
 
 Credentials live in `.env` (gitignored). `test/config.py` reads them via `dotenv` and exports `ACCOUNTS`, `GRAPHQL_TOKENS`, `SHARED_HEADERS`. Other test files import from `config.py`.
 
+### Story Upload Pipeline (instagrapi)
+
+Separate from the cookie-based test scripts. Uses `instagrapi` for username/password login with mobile device simulation.
+
+```bash
+pip install -r requirements.txt
+
+# Add IG_USERNAME and IG_PASSWORD to .env, then:
+python3 test/ig_story.py photo.jpg
+python3 test/ig_story.py video.mp4 "caption here"
+```
+
+- `test/ig_auth.py` — Auth module. Handles login, session persistence (`test/session.json`), device fingerprinting, and interactive 2FA challenge handling.
+- `test/ig_story.py` — CLI for uploading photo/video Stories.
+
 ## Rules
 
 When adding or changing any feature in the extension (new API endpoint, new data flow, new logic), ALWAYS add a corresponding implementation in `test/` so it can be tested outside the browser. The `test/` scripts are the backend mirror of the extension — keep them in sync.

@@ -27,7 +27,17 @@
       "Bash(.venv/bin/python3 -c \"from test.config import ACCOUNTS, GRAPHQL_TOKENS, headers; print\\(''OK -'', ACCOUNTS[1][''name'']\\)\")",
       "Bash(.venv/bin/python3 test/simulate.py)",
       "Bash(.venv/bin/python3 -c \":*)",
-      "Bash(python3 test/benchmark_rates.py)"
+      "Bash(python3 test/benchmark_rates.py)",
+      "Bash(python3 -c \"import PIL\")",
+      "Bash(python3 test_upload.py)",
+      "Bash(python test/simulate.py)",
+      "Bash(.venv/bin/python -c \"from PIL import Image; print\\(''Pillow OK''\\)\")",
+      "Bash(.venv/bin/python test/test_upload.py)",
+      "Bash(.venv/bin/python test/test_post.py \"testing the api\")",
+      "Bash(.venv/bin/python test/test_edit_profile.py --bio \"testing bio edit via api\")",
+      "Bash(.venv/bin/python test/test_change_pic.py)",
+      "Bash(python3 -c \"import instagrapi; print\\(''instagrapi version:'', instagrapi.__version__\\)\")",
+      "Bash(python3 -c \"import instagrapi; print\\(''installed''\\)\")"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude"

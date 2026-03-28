@@ -373,6 +373,73 @@ const InstagramAPI = (() => {
     return result;
   }
 
+  // Upload a photo to Instagram's rupload endpoint
+  async function uploadPhoto(imageBlob) {
+    const uploadId = String(Math.floor(Date.now() / 1000));
+    const entityName = `${uploadId}_0_${Math.floor(Math.random() * 9000000000 + 1000000000)}`;
+
+    const ruploadParams = JSON.stringify({
+      retry_context: JSON.stringify({
+        num_step_auto_retry: 0,
+        num_reupload: 0,
+        num_step_manual_retry: 0,
+      }),
+      media_type: 1,
+      upload_id: uploadId,
+      image_compression: JSON.stringify({
+        lib_name: "moz",
+        lib_version: "3.1.m",
+        quality: "80",
+      }),
+      xsharing_user_ids: "[]",
+    });
+
+    const resp = await rateLimitedFetch(
+      `https://i.instagram.com/rupload_igphoto/${entityName}`,
+      {
+        method: "POST",
+        headers: {
+          "x-instagram-rupload-params": ruploadParams,
+          "x-entity-name": entityName,
+          "x-entity-length": String(imageBlob.size),
+          "x-entity-type": "image/jpeg",
+          "content-type": "image/jpeg",
+          offset: "0",
+        },
+        body: imageBlob,
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, uploadId, data };
+  }
+
+  // Upload + publish a photo as a feed post
+  async function postPhoto(imageBlob, caption = "") {
+    const upload = await uploadPhoto(imageBlob);
+    if (!upload.success) return { success: false, data: upload.data };
+
+    const body = new URLSearchParams({
+      upload_id: upload.uploadId,
+      caption: caption,
+      source_type: "4",
+    });
+
+    const resp = await rateLimitedFetch(
+      "https://www.instagram.com/api/v1/media/configure/",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: body,
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
   // ── GraphQL DM send (IGDirectTextSendMutation) ──
 
   let graphQLTokens = null;
@@ -441,6 +508,46 @@ const InstagramAPI = (() => {
     return { success, data };
   }
 
+  // Change profile picture (multipart upload)
+  async function changeProfilePicture(imageBlob) {
+    const formData = new FormData();
+    formData.append("profile_pic", imageBlob, "profile_pic.jpg");
+
+    const resp = await rateLimitedFetch(
+      "https://www.instagram.com/api/v1/web/accounts/web_change_profile_picture/",
+      {
+        method: "POST",
+        body: formData,
+        // Don't set content-type — browser adds multipart boundary automatically
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
+  // Edit account profile (bio, name, username, url, etc.)
+  async function editProfile(fields = {}) {
+    const body = new URLSearchParams();
+    for (const [key, value] of Object.entries(fields)) {
+      body.append(key, value);
+    }
+
+    const resp = await rateLimitedFetch(
+      "https://www.instagram.com/api/v1/web/accounts/edit/",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: body,
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
   return {
     getProfileInfo,
     getFollowers,
@@ -451,6 +558,8 @@ const InstagramAPI = (() => {
     getExploreProfiles,
     sendDM,
     sendDMGraphQL,
+    uploadPhoto,
+    postPhoto,
     followUser,
     unfollowUser,
     checkRelationship,
@@ -458,6 +567,8 @@ const InstagramAPI = (() => {
     setGraphQLTokens,
     hasGraphQLTokens,
     getUserPosts,
+    changeProfilePicture,
+    editProfile,
     getHeaders,
   };
 })();

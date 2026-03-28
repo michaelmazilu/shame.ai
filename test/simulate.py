@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """
-ShotTaker Pipeline Simulation
-Interactive terminal UI that walks through the full swipe pipeline:
-  1. Load profiles (waterfall: followers → FoF → suggested)
-  2. Swipe through them (right = shoot, left = pass)
-  3. On swipe right: check relationship → DM or follow+track
-  4. Check pending follow-backs
-  5. Timeout/unfollow expired pending
+ShotTaker — Find DM-able Mutuals
+Fetches everyone you follow, checks who follows you back, and lists
+the people you can DM directly.
 
 Usage: python3 test/simulate.py
 """
 
 import json
-import math
 import os
 import random
 import sys
@@ -26,18 +21,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import ACCOUNTS, GRAPHQL_TOKENS, headers as config_headers
 
-ACTIVE = ACCOUNTS[1]
+ACTIVE = ACCOUNTS[0]
 
 DELAY_READ = 0.5  # profile lookups, followers, explore
 DELAY_WRITE = 3.0  # DMs, follows, unfollows
-
-# ── State ──
-
-seen_profiles = set()
-pending_follows = []  # list of dicts: {userId, username, fullName, followedAt, dmTemplate, status, retries}
-shot_history = []
-cached_relationships = {}  # userId → {followedBy, following, outgoingRequest}
-dm_template = "Hey! I came across your profile and had to say hi 👋"
 
 # ── HTTP helpers ──
 
@@ -85,38 +72,6 @@ def rate_limited_request(url, method="GET", data=None, extra_headers=None):
 # ── Instagram API functions ──
 
 
-def get_followers(user_id, count=25, max_id=None):
-    url = f"https://www.instagram.com/api/v1/friendships/{user_id}/followers/?count={count}&search_surface=follow_list_page"
-    if max_id:
-        url += f"&max_id={urllib.parse.quote(max_id)}"
-    status, data = rate_limited_request(url)
-    if status != 200:
-        print(f"  [ERR] get_followers: {status}")
-        return [], None
-    users = [
-        {
-            "id": str(u.get("pk") or u.get("pk_id")),
-            "username": u.get("username"),
-            "fullName": u.get("full_name", ""),
-            "profilePic": u.get("profile_pic_url", ""),
-            "isPrivate": u.get("is_private", False),
-        }
-        for u in data.get("users", [])
-    ]
-    return users, data.get("next_max_id")
-
-
-def get_all_followers(user_id, limit=200):
-    all_users = []
-    max_id = None
-    while True:
-        users, max_id = get_followers(user_id, 200, max_id)
-        all_users.extend(users)
-        if not max_id or len(all_users) >= limit:
-            break
-    return all_users[:limit]
-
-
 def get_following(user_id, count=200, max_id=None):
     url = f"https://www.instagram.com/api/v1/friendships/{user_id}/following/?count={count}&search_surface=follow_list_page"
     if max_id:
@@ -137,167 +92,52 @@ def get_following(user_id, count=200, max_id=None):
     return users, data.get("next_max_id")
 
 
-def get_all_following(user_id, limit=500):
+def get_all_following(user_id):
     all_users = []
     max_id = None
+    page = 0
     while True:
+        page += 1
         users, max_id = get_following(user_id, 200, max_id)
         all_users.extend(users)
-        if not max_id or len(all_users) >= limit:
+        print(f"    page {page}: got {len(users)}, total so far {len(all_users)}")
+        if not max_id or len(users) == 0:
             break
-    return all_users[:limit]
+    return all_users
 
 
-def get_suggested_users():
-    url = "https://www.instagram.com/api/v1/discover/ayml/"
-    status, data = rate_limited_request(
-        url, method="POST", data={"phone_id": "", "module": "discover_people"}
-    )
-    if status != 200:
-        print(f"  [ERR] get_suggested: {status}")
-        return []
-    users = []
-    for item in data.get("suggested_users", {}).get("suggestions", []):
-        u = item.get("user")
-        if u:
-            users.append(
-                {
-                    "id": str(u.get("pk") or u.get("pk_id")),
-                    "username": u.get("username"),
-                    "fullName": u.get("full_name", ""),
-                    "isPrivate": u.get("is_private", False),
-                }
-            )
-    return users
-
-
-def get_profile_info(username):
-    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={urllib.parse.quote(username)}"
+def get_followers(user_id, count=200, max_id=None):
+    url = f"https://www.instagram.com/api/v1/friendships/{user_id}/followers/?count={count}&search_surface=follow_list_page"
+    if max_id:
+        url += f"&max_id={urllib.parse.quote(max_id)}"
     status, data = rate_limited_request(url)
     if status != 200:
-        return None
-    user = (data.get("data") or {}).get("user")
-    if not user:
-        return None
-    mutual_edges = (user.get("edge_mutual_followed_by") or {}).get("edges", [])
-    return {
-        "id": user.get("id"),
-        "username": user.get("username"),
-        "fullName": user.get("full_name", ""),
-        "bio": user.get("biography", ""),
-        "profilePic": user.get("profile_pic_url_hd") or user.get("profile_pic_url", ""),
-        "followers": (user.get("edge_followed_by") or {}).get("count", 0),
-        "following": (user.get("edge_follow") or {}).get("count", 0),
-        "postCount": (user.get("edge_owner_to_timeline_media") or {}).get("count", 0),
-        "isPrivate": user.get("is_private", False),
-        "isVerified": user.get("is_verified", False),
-        "isBusiness": user.get("is_business_account", False),
-        "isProfessional": user.get("is_professional_account", False),
-        "categoryName": user.get("category_name") or user.get("business_category_name"),
-        "pronouns": user.get("pronouns", []),
-        "externalUrl": user.get("external_url"),
-        "mutualFollowers": (user.get("edge_mutual_followed_by") or {}).get("count", 0),
-        "mutualFollowerNames": [e.get("node", {}).get("username") for e in mutual_edges],
-        "followedByViewer": user.get("followed_by_viewer", False),
-        "followsViewer": user.get("follows_viewer", False),
-        "highlightReelCount": user.get("highlight_reel_count", 0),
-        "isJoinedRecently": user.get("is_joined_recently", False),
-    }
-
-
-def get_user_posts(user_id, count=6):
-    url = f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count={count}"
-    status, data = rate_limited_request(url)
-    if status != 200:
-        print(f"  [ERR] get_user_posts: {status}")
-        return []
-    posts = []
-    for item in data.get("items", []):
-        candidates = (item.get("image_versions2") or {}).get("candidates", [])
-        best = candidates[0] if candidates else {}
-        location = item.get("location")
-        music = item.get("music_metadata")
-        music_info = (music or {}).get("music_info", {}).get("music_asset_info", {})
-        posts.append({
-            "id": item.get("pk"),
-            "mediaType": item.get("media_type"),  # 1=photo, 2=video, 8=carousel
-            "imageUrl": best.get("url"),
-            "caption": (item.get("caption") or {}).get("text"),
-            "likeCount": item.get("like_count", 0),
-            "commentCount": item.get("comment_count", 0),
-            "playCount": item.get("play_count", 0),
-            "takenAt": item.get("taken_at"),
-            "location": {
-                "name": location.get("name"),
-                "city": location.get("city"),
-                "lat": location.get("lat"),
-                "lng": location.get("lng"),
-            } if location else None,
-            "usertags": [
-                {"username": t.get("user", {}).get("username"), "id": t.get("user", {}).get("pk")}
-                for t in (item.get("usertags") or {}).get("in", [])
-            ],
-            "music": {
-                "title": music_info.get("title"),
-                "artist": music_info.get("display_artist"),
-            } if music_info.get("title") else None,
-            "isPaidPartnership": item.get("is_paid_partnership", False),
-            "productType": item.get("product_type"),  # "clips" = reel
-            "coauthors": [
-                {"username": c.get("username"), "id": c.get("pk")}
-                for c in (item.get("coauthor_producers") or [])
-            ],
-        })
-    return posts
-
-
-def check_relationship(user_id):
-    url = f"https://www.instagram.com/api/v1/friendships/show/{user_id}/"
-    status, data = rate_limited_request(url)
-    if status != 200:
-        print(f"  [ERR] check_relationship: {status}")
-        return {"followedBy": False, "following": False, "outgoingRequest": False}
-    return {
-        "followedBy": bool(data.get("followed_by")),
-        "following": bool(data.get("following")),
-        "outgoingRequest": bool(data.get("outgoing_request")),
-    }
-
-
-def check_relationship_many(user_ids):
-    """Bulk check relationship status for multiple users in one API call."""
-    url = "https://www.instagram.com/api/v1/friendships/show_many/"
-    status, data = rate_limited_request(
-        url, method="POST", data={"user_ids": ",".join(str(uid) for uid in user_ids)}
-    )
-    if status != 200:
-        print(f"  [ERR] check_relationship_many: {status}")
-        return {}
-    statuses = data.get("friendship_statuses", {})
-    result = {}
-    for uid, s in statuses.items():
-        result[uid] = {
-            "followedBy": bool(s.get("followed_by")),
-            "following": bool(s.get("following")),
-            "outgoingRequest": bool(s.get("outgoing_request")),
+        print(f"  [ERR] get_followers: {status}")
+        return [], None
+    users = [
+        {
+            "id": str(u.get("pk") or u.get("pk_id")),
+            "username": u.get("username"),
+            "fullName": u.get("full_name", ""),
+            "isPrivate": u.get("is_private", False),
         }
-    return result
+        for u in data.get("users", [])
+    ]
+    return users, data.get("next_max_id")
 
 
-def follow_user(user_id):
-    url = f"https://www.instagram.com/api/v1/friendships/create/{user_id}/"
-    status, data = rate_limited_request(
-        url, method="POST", data={"container_module": "profile", "user_id": user_id}
-    )
-    return status == 200
-
-
-def unfollow_user(user_id):
-    url = f"https://www.instagram.com/api/v1/friendships/destroy/{user_id}/"
-    status, data = rate_limited_request(
-        url, method="POST", data={"container_module": "profile", "user_id": user_id}
-    )
-    return status == 200
+def get_all_followers(user_id):
+    all_users = []
+    max_id = None
+    page = 0
+    while True:
+        page += 1
+        users, max_id = get_followers(user_id, 200, max_id)
+        all_users.extend(users)
+        print(f"    page {page}: got {len(users)}, total so far {len(all_users)}")
+        if not max_id or len(users) == 0:
+            break
+    return all_users
 
 
 def send_dm_graphql(recipient_id, text):
@@ -340,45 +180,6 @@ def send_dm_graphql(recipient_id, text):
     return status == 200 and len(errors) == 0
 
 
-# ── Pipeline helpers ──
-
-
-def filter_and_dedupe(profiles):
-    unique = {}
-    for p in profiles:
-        pid = p["id"]
-        if pid in seen_profiles:
-            continue
-        if p.get("isPrivate"):
-            continue
-        if pid == ACTIVE["userId"]:
-            continue
-        if pid not in unique:
-            unique[pid] = p
-    return list(unique.values())
-
-
-def format_count(n):
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.1f}K"
-    return str(n)
-
-
-def time_since(ts):
-    secs = int(time.time() - ts)
-    if secs < 60:
-        return f"{secs}s"
-    mins = secs // 60
-    if mins < 60:
-        return f"{mins}m"
-    hours = mins // 60
-    if hours < 24:
-        return f"{hours}h"
-    return f"{hours // 24}d"
-
-
 # ── Display ──
 
 BOLD = "\033[1m"
@@ -390,413 +191,92 @@ DIM = "\033[2m"
 RESET = "\033[0m"
 
 
-def print_header(text):
-    print(f"\n{BOLD}{'=' * 50}{RESET}")
-    print(f"{BOLD}  {text}{RESET}")
-    print(f"{BOLD}{'=' * 50}{RESET}")
+def format_count(n):
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
 
 
-def print_profile_card(profile, index, total):
-    print(f"\n{CYAN}{'─' * 50}{RESET}")
-    # Name + verification
-    name = profile.get("fullName") or profile["username"]
-    verified = " ✓" if profile.get("isVerified") else ""
-    print(f"  {BOLD}{name}{verified}{RESET}")
-    print(f"  @{profile['username']}  {DIM}({profile['id']}){RESET}")
-
-    # Badges: pronouns, category, business
-    badges = []
-    if profile.get("pronouns"):
-        badges.append("/".join(profile["pronouns"]))
-    if profile.get("categoryName"):
-        badges.append(profile["categoryName"])
-    if profile.get("isBusiness") or profile.get("isProfessional"):
-        badges.append("Professional" if profile.get("isProfessional") else "Business")
-    if badges:
-        print(f"  {DIM}{' · '.join(badges)}{RESET}")
-
-    # Bio
-    if profile.get("bio"):
-        bio = profile["bio"][:120]
-        print(f"  {DIM}{bio}{RESET}")
-
-    # External URL
-    if profile.get("externalUrl"):
-        print(f"  🔗 {DIM}{profile['externalUrl']}{RESET}")
-
-    # Stats row
-    stats = []
-    if profile.get("followers") is not None:
-        stats.append(f"{format_count(profile['followers'])} followers")
-    if profile.get("following") is not None:
-        stats.append(f"{format_count(profile['following'])} following")
-    if profile.get("postCount"):
-        stats.append(f"{format_count(profile['postCount'])} posts")
-    if stats:
-        print(f"  {' | '.join(stats)}")
-
-    # Mutual followers
-    if profile.get("mutualFollowers", 0) > 0:
-        names = profile.get("mutualFollowerNames", [])
-        mutual_str = f"{profile['mutualFollowers']} mutual"
-        if names:
-            mutual_str += f" incl. @{', @'.join(names[:3])}"
-        print(f"  {CYAN}{mutual_str}{RESET}")
-
-    # Relationship (from profile enrichment)
-    rel_parts = []
-    if profile.get("followedByViewer"):
-        rel_parts.append(f"{GREEN}you follow them{RESET}")
-    if profile.get("followsViewer"):
-        rel_parts.append(f"{GREEN}they follow you{RESET}")
-    if rel_parts:
-        print(f"  {' | '.join(rel_parts)}")
-
-    # Relationship (from bulk show_many check)
-    bulk_rel = cached_relationships.get(profile.get("id"))
-    if bulk_rel:
-        bulk_parts = []
-        if bulk_rel["followedBy"]:
-            bulk_parts.append(f"{GREEN}they follow you → DM ready 💘{RESET}")
-        if bulk_rel["following"]:
-            bulk_parts.append(f"{DIM}you follow them{RESET}")
-        if bulk_rel["outgoingRequest"]:
-            bulk_parts.append(f"{YELLOW}pending follow request{RESET}")
-        if not bulk_rel["followedBy"] and not bulk_rel["following"]:
-            bulk_parts.append(f"{DIM}no relationship{RESET}")
-        print(f"  {' | '.join(bulk_parts)}")
-
-    # Recent posts
-    posts = profile.get("recentPosts", [])
-    if posts:
-        total_likes = sum(p.get("likeCount", 0) for p in posts)
-        avg_likes = total_likes // len(posts) if posts else 0
-        print(f"\n  {BOLD}Recent posts ({len(posts)}):{RESET}  avg {format_count(avg_likes)} likes")
-
-        # Locations from posts
-        locations = list({p["location"]["name"] for p in posts if p.get("location") and p["location"].get("name")})
-        if locations:
-            print(f"  📍 {', '.join(locations[:3])}")
-
-        # Show each post
-        for j, post in enumerate(posts[:4]):
-            media_icon = "📷" if post.get("mediaType") == 1 else "🎬" if post.get("mediaType") == 2 else "📑"
-            caption = (post.get("caption") or "")[:80]
-            likes = format_count(post.get("likeCount", 0))
-            comments = format_count(post.get("commentCount", 0))
-            plays = f" | {format_count(post['playCount'])} plays" if post.get("playCount") else ""
-
-            age = ""
-            if post.get("takenAt"):
-                age = time_since(post["takenAt"])
-
-            print(f"    {media_icon} {DIM}{age} ago{RESET} — ❤ {likes} 💬 {comments}{plays}")
-            if caption:
-                print(f"       {DIM}\"{caption}\"{RESET}")
-
-            # Tags, music, collabs
-            extras = []
-            if post.get("usertags"):
-                tag_names = [t["username"] for t in post["usertags"] if t.get("username")]
-                if tag_names:
-                    extras.append(f"tagged: @{', @'.join(tag_names[:3])}")
-            if post.get("music"):
-                extras.append(f"🎵 {post['music']['title']} — {post['music']['artist']}")
-            if post.get("coauthors"):
-                collab_names = [c["username"] for c in post["coauthors"] if c.get("username")]
-                if collab_names:
-                    extras.append(f"collab: @{', @'.join(collab_names)}")
-            if post.get("isPaidPartnership"):
-                extras.append("💰 paid partnership")
-            if extras:
-                print(f"       {DIM}{' | '.join(extras)}{RESET}")
-
-    # Highlight reels
-    if profile.get("highlightReelCount"):
-        print(f"  {profile['highlightReelCount']} highlight reels")
-
-    if profile.get("isJoinedRecently"):
-        print(f"  {YELLOW}⚠ Joined recently{RESET}")
-
-    print(f"  {DIM}Card {index + 1} of {total}{RESET}")
-    print(f"{CYAN}{'─' * 50}{RESET}")
-
-
-def print_pending_list():
-    active = [p for p in pending_follows if p["status"] == "pending"]
-    if not active:
-        print(f"  {DIM}No pending follow-backs{RESET}")
-        return
-    for p in active:
-        ago = time_since(p["followedAt"])
-        print(f"  @{p['username']} — followed {ago} ago")
-
-
-# ── Swipe right logic (mirrors content.js onSwipeRight) ──
-
-
-def handle_swipe_right(profile):
-    seen_profiles.add(profile["id"])
-
-    # Use cached bulk data if available, otherwise fall back to individual call
-    if profile["id"] in cached_relationships:
-        print(f"\n  Relationship with @{profile['username']} (cached from bulk check)")
-        rel = cached_relationships[profile["id"]]
-    else:
-        print(f"\n  Checking relationship with @{profile['username']}...")
-        rel = check_relationship(profile["id"])
-
-    print(
-        f"  followedBy={rel['followedBy']}  following={rel['following']}  outgoing={rel['outgoingRequest']}"
-    )
-
-    if rel["followedBy"]:
-        # They follow us — DM immediately
-        print(f"\n  {GREEN}They follow you! Sending DM...{RESET}")
-        msg = input(f"  Message [{dm_template[:40]}...]: ").strip() or dm_template
-        success = send_dm_graphql(profile["id"], msg)
-        if success:
-            print(f"  {GREEN}Shot sent to @{profile['username']}! 💘{RESET}")
-            shot_history.append(
-                {
-                    "username": profile["username"],
-                    "timestamp": time.time(),
-                    "method": "direct_dm",
-                }
-            )
-        else:
-            print(f"  {RED}Failed to send DM{RESET}")
-    else:
-        # They don't follow us — follow them and track
-        print(f"\n  {YELLOW}They don't follow you yet.{RESET}")
-        confirm = input("  Follow them and queue DM for follow-back? [Y/n]: ").strip()
-        if confirm.lower() == "n":
-            print("  Skipped.")
-            return
-
-        print(f"  Following @{profile['username']}...")
-        if follow_user(profile["id"]):
-            pending_follows.append(
-                {
-                    "userId": profile["id"],
-                    "username": profile["username"],
-                    "fullName": profile.get("fullName", ""),
-                    "followedAt": time.time(),
-                    "dmTemplate": dm_template,
-                    "status": "pending",
-                    "retries": 0,
-                }
-            )
-            print(
-                f"  {GREEN}Followed! Will DM when they follow back (checking every 5 min){RESET}"
-            )
-        else:
-            print(f"  {RED}Failed to follow{RESET}")
-
-
-def handle_swipe_left(profile):
-    seen_profiles.add(profile["id"])
-    print(f"  {DIM}Passed on @{profile['username']}{RESET}")
-
-
-# ── Pending follow-back check (mirrors background.js processPendingFollows) ──
-
-TIMEOUT_SECS = 48 * 60 * 60  # 48 hours
-MAX_RETRIES = 3
-
-
-def check_pending_followbacks():
-    active = [p for p in pending_follows if p["status"] == "pending"]
-    if not active:
-        print(f"  {DIM}No pending follow-backs to check{RESET}")
-        return
-
-    print(f"\n  Checking {len(active)} pending follow-backs...")
-    now = time.time()
-
-    for entry in active:
-        # Timeout check
-        if now - entry["followedAt"] > TIMEOUT_SECS:
-            print(
-                f"  {RED}@{entry['username']} timed out (48h) — unfollowing...{RESET}"
-            )
-            unfollow_user(entry["userId"])
-            entry["status"] = "expired"
-            continue
-
-        # Check if they followed back
-        print(f"  Checking @{entry['username']}...")
-        rel = check_relationship(entry["userId"])
-
-        if rel["followedBy"]:
-            print(
-                f"  {GREEN}@{entry['username']} followed back! Sending DM...{RESET}"
-            )
-            success = send_dm_graphql(entry["userId"], entry["dmTemplate"])
-            if success:
-                entry["status"] = "sent"
-                shot_history.append(
-                    {
-                        "username": entry["username"],
-                        "timestamp": time.time(),
-                        "method": "follow_back_dm",
-                    }
-                )
-                print(f"  {GREEN}Shot sent to @{entry['username']}! 💘{RESET}")
-            else:
-                entry["retries"] += 1
-                print(
-                    f"  {RED}DM failed (retry {entry['retries']}/{MAX_RETRIES}){RESET}"
-                )
-                if entry["retries"] >= MAX_RETRIES:
-                    entry["status"] = "expired"
-                    unfollow_user(entry["userId"])
-                    print(f"  {RED}Max retries — unfollowed @{entry['username']}{RESET}")
-        else:
-            ago = time_since(entry["followedAt"])
-            print(f"  {DIM}@{entry['username']} — no follow-back yet ({ago}){RESET}")
-
-
-# ── Waterfall profile loading ──
-
-
-def load_profiles_waterfall(enrich=True, enrich_limit=5):
-    """Load profiles in tiers: followers → FoF → suggested.
-    enrich_limit controls how many to enrich per tier (saves API calls in testing).
-    """
-    my_id = ACTIVE["userId"]
-    all_profiles = []
-
-    # Tier 1: My followers
-    print(f"\n{BOLD}Tier 1: Your followers{RESET}")
-    followers = get_all_followers(my_id, limit=50)
-    print(f"  Fetched {len(followers)} followers")
-    tier1 = filter_and_dedupe(followers)
-    print(f"  After filter: {len(tier1)} swipeable")
-
-    if enrich and tier1:
-        print(f"  Enriching top {min(enrich_limit, len(tier1))}...")
-        for p in tier1[:enrich_limit]:
-            info = get_profile_info(p["username"])
-            if info:
-                p.update(info)
-                posts = get_user_posts(info["id"], 6)
-                p["recentPosts"] = posts
-    all_profiles.extend(tier1)
-
-    # Tier 2: Friends of friends
-    print(f"\n{BOLD}Tier 2: Friends of friends{RESET}")
-    following = get_all_following(my_id, limit=100)
-    print(f"  You follow {len(following)} people")
-    sampled = random.sample(following, min(3, len(following)))
-    print(f"  Sampling {len(sampled)} to get their followers")
-
-    fof = []
-    for f in sampled:
-        print(f"  Fetching followers of @{f['username']}...")
-        f_followers, _ = get_followers(f["id"], 25)
-        fof.extend(f_followers)
-
-    tier2 = filter_and_dedupe(fof)
-    # Also exclude tier1 profiles
-    tier1_ids = {p["id"] for p in tier1}
-    tier2 = [p for p in tier2 if p["id"] not in tier1_ids]
-    print(f"  After filter: {len(tier2)} new profiles")
-
-    if enrich and tier2:
-        print(f"  Enriching top {min(enrich_limit, len(tier2))}...")
-        for p in tier2[:enrich_limit]:
-            info = get_profile_info(p["username"])
-            if info:
-                p.update(info)
-                posts = get_user_posts(info["id"], 6)
-                p["recentPosts"] = posts
-    all_profiles.extend(tier2)
-
-    # Tier 3: Suggested
-    print(f"\n{BOLD}Tier 3: Suggested users{RESET}")
-    suggested = get_suggested_users()
-    print(f"  Fetched {len(suggested)} suggested")
-    prev_ids = {p["id"] for p in all_profiles}
-    tier3 = [p for p in filter_and_dedupe(suggested) if p["id"] not in prev_ids]
-    print(f"  After filter: {len(tier3)} new profiles")
-
-    if enrich and tier3:
-        print(f"  Enriching top {min(enrich_limit, len(tier3))}...")
-        for p in tier3[:enrich_limit]:
-            info = get_profile_info(p["username"])
-            if info:
-                p.update(info)
-                posts = get_user_posts(info["id"], 6)
-                p["recentPosts"] = posts
-    all_profiles.extend(tier3)
-
-    print(f"\n{GREEN}Total: {len(all_profiles)} profiles loaded across 3 tiers{RESET}")
-
-    # Bulk pre-check relationships (up to 100 per call)
-    if all_profiles:
-        print(f"\n{BOLD}Bulk relationship check ({len(all_profiles)} profiles)...{RESET}")
-        ids = [p["id"] for p in all_profiles]
-        for batch_start in range(0, len(ids), 100):
-            batch = ids[batch_start:batch_start + 100]
-            print(f"  Checking batch of {len(batch)}...")
-            statuses = check_relationship_many(batch)
-            cached_relationships.update(statuses)
-        follows_you = sum(1 for r in cached_relationships.values() if r["followedBy"])
-        print(f"  {GREEN}{follows_you} already follow you (instant DM eligible){RESET}")
-
-    return all_profiles
-
-
-# ── Main — load then swipe, like the real UI ──
+# ── Main ──
 
 
 def main():
-    print(f"\n{BOLD}🎯 ShotTaker{RESET}")
-    print(f"{DIM}Loading profiles...{RESET}\n")
+    my_id = ACTIVE["userId"]
 
-    profiles = load_profiles_waterfall(enrich=True, enrich_limit=10)
+    print(f"\n{BOLD}ShotTaker — Find DM-able Mutuals{RESET}")
 
-    if not profiles:
-        print(f"\n{RED}No profiles found. Check your cookies/session.{RESET}")
+    # Step 1: Fetch following and followers lists
+    print(f"{DIM}Fetching everyone you follow...{RESET}")
+    following = get_all_following(my_id)
+    print(f"  You follow {BOLD}{len(following)}{RESET} people\n")
+
+    print(f"{DIM}Fetching your followers...{RESET}")
+    followers = get_all_followers(my_id)
+    print(f"  You have {BOLD}{len(followers)}{RESET} followers\n")
+
+    if not following or not followers:
+        print(f"{RED}Could not fetch lists. Check your cookies/session.{RESET}")
         return
 
-    print(f"\n{GREEN}{len(profiles)} profiles ready.{RESET}")
-    print(f"{DIM}Swipe:  {GREEN}r{RESET}{DIM} = shoot your shot  {RED}l{RESET}{DIM} = pass  {DIM}q = quit{RESET}\n")
+    # Step 2: Intersect to find mutuals
+    follower_ids = {p["id"] for p in followers}
+    following_by_id = {p["id"]: p for p in following}
+    mutual_ids = follower_ids & set(following_by_id.keys())
+    mutuals = [following_by_id[mid] for mid in mutual_ids]
+    mutuals.sort(key=lambda p: p["username"].lower())
 
-    i = 0
-    while i < len(profiles):
-        p = profiles[i]
-        print_profile_card(p, i, len(profiles))
+    # Step 3: Print results
+    print(f"{'=' * 50}")
+    print(f"  {BOLD}{len(mutuals)}{RESET} mutuals found")
+    print(f"  {GREEN}All {len(mutuals)} can receive DMs{RESET}")
+    print(f"{'=' * 50}\n")
 
-        action = input(f"  {GREEN}→{RESET} shoot  /  {RED}←{RESET} pass  /  quit?  ").strip().lower()
+    if not mutuals:
+        print(f"{YELLOW}No mutual follows found.{RESET}")
+        return
 
-        if action in ("r", "right", "→", ""):
-            handle_swipe_right(p)
-            i += 1
-        elif action in ("l", "left", "←"):
-            handle_swipe_left(p)
-            i += 1
-        elif action in ("q", "quit"):
+    for i, p in enumerate(mutuals):
+        name = p.get("fullName") or ""
+        name_part = f"  {DIM}{name}{RESET}" if name else ""
+        print(f"  {GREEN}{i + 1:>3}.{RESET} @{p['username']}{name_part}")
+
+    print(f"\n{DIM}{len(mutuals)} people you can DM right now.{RESET}")
+    print(f"{DIM}Enter a number to DM someone, or q to quit.{RESET}\n")
+
+    # DM loop
+    while True:
+        pick = input(f"  {GREEN}#{RESET} DM who? (1-{len(mutuals)} or q): ").strip().lower()
+        if pick in ("q", "quit", ""):
             break
-        else:
-            print(f"  {DIM}r = shoot, l = pass, q = quit{RESET}")
+        try:
+            idx = int(pick) - 1
+            if idx < 0 or idx >= len(mutuals):
+                print(f"  {RED}Pick a number between 1 and {len(mutuals)}{RESET}")
+                continue
+        except ValueError:
+            print(f"  {RED}Enter a number or q{RESET}")
+            continue
 
-    # Summary
-    print(f"\n{CYAN}{'─' * 50}{RESET}")
-    print(f"  {BOLD}Session done{RESET}")
-    print(f"  Profiles seen: {len(seen_profiles)}")
-    print(f"  Shots fired:   {len(shot_history)}")
-    pending = [p for p in pending_follows if p["status"] == "pending"]
-    if pending:
-        print(f"  Pending follow-backs: {len(pending)}")
-        for p in pending:
-            print(f"    @{p['username']}")
-    if shot_history:
-        print(f"\n  {BOLD}Shots:{RESET}")
-        for s in shot_history:
-            print(f"    💘 @{s['username']} ({s['method']})")
-    print(f"{CYAN}{'─' * 50}{RESET}\n")
+        target = mutuals[idx]
+        name = target.get("fullName") or target["username"]
+        print(f"\n  {BOLD}@{target['username']}{RESET}  {DIM}{name}{RESET}")
+        msg = input("  Message: ").strip()
+        if not msg:
+            print(f"  {DIM}Skipped (empty message){RESET}\n")
+            continue
+
+        confirm = input(f"  Send to @{target['username']}? [Y/n]: ").strip().lower()
+        if confirm == "n":
+            print(f"  {DIM}Cancelled{RESET}\n")
+            continue
+
+        print(f"  Sending...")
+        if send_dm_graphql(target["id"], msg):
+            print(f"  {GREEN}Sent to @{target['username']}!{RESET}\n")
+        else:
+            print(f"  {RED}Failed to send DM{RESET}\n")
 
 
 if __name__ == "__main__":
