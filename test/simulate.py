@@ -261,26 +261,16 @@ def resolve_media_id(reel_url_or_shortcode):
 
 
 def send_reel_dm(recipient_id, reel_url, text=None):
-    """Send a reel to a user via DM with an optional message."""
-    media_id = resolve_media_id(reel_url)
-    if not media_id:
-        return False
+    """Send a reel to a user via DM.
 
-    form_data = {
-        "recipient_users": json.dumps([[str(recipient_id)]]),
-        "action": "send_item",
-        "media_id": media_id,
-        "client_context": str(random.randint(10**18, 9 * 10**18)),
-    }
-    if text:
-        form_data["text"] = text
-
-    status, _data = rate_limited_request(
-        "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
-        method="POST",
-        data=form_data,
-    )
-    return status == 200
+    Sends the reel URL as text — Instagram auto-embeds it as a rich
+    reel preview in the DM thread. Uses the same GraphQL text send
+    mutation as regular DMs.
+    """
+    if not reel_url.startswith("http"):
+        reel_url = f"https://www.instagram.com/reel/{reel_url}/"
+    message = f"{reel_url}\n{text}" if text else reel_url
+    return send_dm_graphql(recipient_id, message)
 
 
 # ── Display ──

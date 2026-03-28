@@ -17,10 +17,13 @@ import sys
 import time
 
 import requests
+from dotenv import load_dotenv
 
-AZURE_ENDPOINT = "REDACTED"
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
+
+AZURE_ENDPOINT = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/") + "/openai/deployments/FLUX.1-Kontext-pro/images/generations"
 AZURE_API_VERSION = "2025-04-01-preview"
-AZURE_API_KEY = "REDACTED"
+AZURE_API_KEY = os.environ.get("AZURE_OPENAI_API_KEY", "")
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 

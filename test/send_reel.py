@@ -121,25 +121,110 @@ def resolve_media_id(reel_url_or_shortcode):
     return None
 
 
-def send_reel_dm(recipient_id, media_id, text=None):
-    """Send a reel to a user via DM with an optional message."""
-    form_data = {
-        "recipient_users": json.dumps([[str(recipient_id)]]),
-        "action": "send_item",
-        "media_id": media_id,
-        "client_context": str(random.randint(10**18, 9 * 10**18)),
-    }
-    if text:
-        form_data["text"] = text
+def fetch_graphql_tokens():
+    """Scrape fresh fb_dtsg and lsd tokens by loading an Instagram page.
 
+    These tokens rotate every session and expire quickly, so we fetch
+    them live rather than relying on stale .env values.
+    """
+    headers = config_headers()
+    req = urllib.request.Request(
+        "https://www.instagram.com/",
+        headers=headers,
+    )
+    resp = urllib.request.urlopen(req, context=ssl_ctx)
+    html = resp.read().decode("utf-8", errors="replace")
+
+    import re
+    dtsg_match = re.search(r'"DTSGInitialData".*?"token":"([^"]+)"', html)
+    lsd_match = re.search(r'"LSD".*?"token":"([^"]+)"', html)
+
+    if not dtsg_match or not lsd_match:
+        # Fallback patterns
+        dtsg_match = dtsg_match or re.search(r'fb_dtsg["\s:]+value["\s:]+([^"&]+)', html)
+        lsd_match = lsd_match or re.search(r'"lsd":"([^"]+)"', html)
+
+    if not dtsg_match or not lsd_match:
+        print(f"  {RED}Could not scrape GraphQL tokens from page{RESET}")
+        print(f"  {DIM}Update FB_DTSG and LSD in .env manually{RESET}")
+        from config import GRAPHQL_TOKENS
+        return GRAPHQL_TOKENS
+
+    tokens = {
+        "fb_dtsg": dtsg_match.group(1),
+        "lsd": lsd_match.group(1),
+    }
+    print(f"  {DIM}Scraped fresh GraphQL tokens{RESET}")
+    return tokens
+
+
+_cached_tokens = None
+
+
+def get_graphql_tokens():
+    """Get fresh GraphQL tokens (cached per session)."""
+    global _cached_tokens
+    if _cached_tokens is None:
+        _cached_tokens = fetch_graphql_tokens()
+    return _cached_tokens
+
+
+def send_reel_dm(recipient_id, reel_url, text=None):
+    """Send a reel to a user via DM using GraphQL.
+
+    Sends the reel URL as text — Instagram auto-embeds it as a rich
+    reel preview in the DM thread, identical to sharing via the app.
+    """
+    tokens = get_graphql_tokens()
+
+    # Ensure we have a full URL for the embed
+    if not reel_url.startswith("http"):
+        reel_url = f"https://www.instagram.com/reel/{reel_url}/"
+
+    if text:
+        message = f"{reel_url}\n{text}"
+    else:
+        message = reel_url
+
+    offline_id = str(random.randint(10**18, 9 * 10**18))
+    variables = {
+        "ig_thread_igid": None,
+        "offline_threading_id": offline_id,
+        "recipient_igids": [str(recipient_id)],
+        "replied_to_client_context": None,
+        "replied_to_item_id": None,
+        "reply_to_message_id": None,
+        "sampled": None,
+        "text": {"sensitive_string_value": message},
+        "mentions": [],
+        "mentioned_user_ids": [],
+        "commands": None,
+    }
+    form_data = {
+        "fb_dtsg": tokens["fb_dtsg"],
+        "lsd": tokens["lsd"],
+        "__a": "1",
+        "__user": "0",
+        "__comet_req": "7",
+        "fb_api_caller_class": "RelayModern",
+        "fb_api_req_friendly_name": "IGDirectTextSendMutation",
+        "server_timestamps": "true",
+        "variables": json.dumps(variables),
+        "doc_id": "25288447354146606",
+    }
     status, data = rate_limited_request(
-        "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
+        "https://www.instagram.com/api/graphql",
         method="POST",
         data=form_data,
+        extra_headers={
+            "x-fb-friendly-name": "IGDirectTextSendMutation",
+            "x-fb-lsd": tokens["lsd"],
+        },
     )
-    if status != 200:
-        print(f"  {RED}HTTP {status}: {json.dumps(data, indent=2)[:300] if isinstance(data, dict) else str(data)[:300]}{RESET}")
-    return status == 200
+    errors = data.get("errors", []) if isinstance(data, dict) else []
+    if status != 200 or errors:
+        print(f"  {RED}HTTP {status}: {json.dumps(data, indent=2)[:400] if isinstance(data, dict) else str(data)[:400]}{RESET}")
+    return status == 200 and len(errors) == 0
 
 
 # ── Display ──
@@ -269,8 +354,9 @@ def pick_reel_interactive():
     user = reel.user.username if reel.user else "unknown"
     print(f"  {GREEN}Selected:{RESET} @{user} — {(reel.caption_text or '')[:50]}")
 
-    # Return the media PK as a string — we'll use it directly as the media_id
-    return str(reel.pk)
+    # Return the reel URL for DM sharing (IG auto-embeds it)
+    code = reel.code or reel.pk
+    return f"https://www.instagram.com/reel/{code}/"
 
 
 # ── Main ──
@@ -332,14 +418,10 @@ def main():
                 print(f"  {DIM}Skipped{RESET}\n")
                 continue
 
-        # Resolve media_id — if it's purely numeric it's already a PK from instagrapi
-        if reel_input.isdigit():
-            media_id = reel_input
-        else:
-            media_id = resolve_media_id(reel_input)
-            if not media_id:
-                print(f"  {RED}Could not resolve reel. Check the URL.{RESET}\n")
-                continue
+        # Ensure we have a proper reel URL
+        reel_url = reel_input
+        if not reel_url.startswith("http"):
+            reel_url = f"https://www.instagram.com/reel/{reel_url}/"
 
         # Optional message
         msg = input("  Message (optional, Enter to skip): ").strip() or None
@@ -351,7 +433,7 @@ def main():
             continue
 
         print(f"  Sending reel...")
-        if send_reel_dm(target["id"], media_id, msg):
+        if send_reel_dm(target["id"], reel_url, msg):
             print(f"  {GREEN}Reel sent to @{target['username']}!{RESET}\n")
         else:
             print(f"  {RED}Failed to send reel{RESET}\n")

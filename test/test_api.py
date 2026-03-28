@@ -476,7 +476,11 @@ def resolve_media_id(reel_url_or_shortcode):
 
 
 def test_send_reel(recipient_id, reel_url, text=None):
-    """Send a reel to a user via DM with an optional message."""
+    """Send a reel to a user via DM.
+
+    Sends the reel URL as text — Instagram auto-embeds it as a rich
+    reel preview in the DM thread.
+    """
     if not recipient_id or not reel_url:
         print("Usage: python test/test_api.py send-reel <userId> <reelUrl> [message]")
         sys.exit(1)
@@ -486,38 +490,11 @@ def test_send_reel(recipient_id, reel_url, text=None):
     if text:
         print(f'  Message: "{text}"')
 
-    media_id = resolve_media_id(reel_url)
-    if not media_id:
-        print("FAILED — could not resolve media_id")
-        return {"success": False}
+    if not reel_url.startswith("http"):
+        reel_url = f"https://www.instagram.com/reel/{reel_url}/"
+    message = f"{reel_url}\n{text}" if text else reel_url
 
-    # Use the media_share broadcast endpoint
-    body = {
-        "recipient_users": json.dumps([[str(recipient_id)]]),
-        "action": "send_item",
-        "media_id": media_id,
-        "client_context": str(random.randint(10**18, 10**19 - 1)),
-    }
-    if text:
-        body["text"] = text
-
-    resp = requests.post(
-        "https://www.instagram.com/api/v1/direct_v2/threads/broadcast/media_share/",
-        headers={**HEADERS, "content-type": "application/x-www-form-urlencoded"},
-        data=body,
-    )
-
-    print("Status:", resp.status_code)
-
-    if resp.ok:
-        data = resp.json()
-        print("SUCCESS — reel sent via DM")
-        print("  Response:", json.dumps(data, indent=2)[:500])
-        return {"success": True, "data": data}
-    else:
-        print("FAILED")
-        print("  Response:", resp.text[:500])
-        return {"success": False}
+    return test_send_graphql(recipient_id, message)
 
 
 def test_simulate(message=None):
