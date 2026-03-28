@@ -305,18 +305,36 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Hero mockup — single centred card */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6, type: "spring", stiffness: 80, damping: 18 }}
-          whileHover={{ y: -4, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-          className="mt-10 flex justify-center"
-        >
-          <div className="w-full max-w-sm">
+        {/* Mockup cards — centred row, scaled up */}
+        <div className="mt-10 flex items-end justify-center gap-6 overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 60, rotate: -2 }}
+            animate={{ opacity: 1, y: 0, rotate: -2 }}
+            transition={{ duration: 0.9, delay: 0.6, type: "spring", stiffness: 80, damping: 18 }}
+            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden sm:block mb-6 scale-110 origin-bottom"
+          >
             <MockNotification />
-          </div>
-        </motion.div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 70 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.8, type: "spring", stiffness: 80, damping: 18 }}
+            whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 scale-110 origin-bottom"
+          >
+            <MockDM />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 60, rotate: 2 }}
+            animate={{ opacity: 1, y: 0, rotate: 2 }}
+            transition={{ duration: 0.9, delay: 1.0, type: "spring", stiffness: 80, damping: 18 }}
+            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden md:block mb-10 scale-110 origin-bottom"
+          >
+            <MockStory />
+          </motion.div>
+        </div>
       </section>
 
       {/* Testimonials */}
