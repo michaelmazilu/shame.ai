@@ -306,31 +306,42 @@ export default function LandingPage() {
         </div>
 
         {/* Mockup cards — centred row, scaled up */}
-        <div className="mt-10 flex items-end justify-center gap-6 overflow-hidden">
+        <div className="mt-10 flex items-end justify-center gap-6 px-4">
           <motion.div
             initial={{ opacity: 0, y: 60, rotate: -2 }}
-            animate={{ opacity: 1, y: 0, rotate: -2 }}
-            transition={{ duration: 0.9, delay: 0.6, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden sm:block mb-6 scale-110 origin-bottom"
+            animate={{ opacity: 1, y: [0, -6, 0], rotate: -2 }}
+            transition={{
+              opacity: { duration: 0.6, delay: 0.6 },
+              y: { duration: 4, delay: 1.5, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 0.9, delay: 0.6 },
+            }}
+            whileHover={{ rotate: 0, y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden sm:block mb-6 scale-105 origin-bottom"
           >
             <MockNotification />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 70 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.8, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 scale-110 origin-bottom"
+            animate={{ opacity: 1, y: [0, -8, 0] }}
+            transition={{
+              opacity: { duration: 0.6, delay: 0.8 },
+              y: { duration: 5, delay: 2, repeat: Infinity, ease: "easeInOut" },
+            }}
+            whileHover={{ y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 scale-105 origin-bottom"
           >
             <MockDM />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 60, rotate: 2 }}
-            animate={{ opacity: 1, y: 0, rotate: 2 }}
-            transition={{ duration: 0.9, delay: 1.0, type: "spring", stiffness: 80, damping: 18 }}
-            whileHover={{ rotate: 0, y: -8, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className="shrink-0 hidden md:block mb-10 scale-110 origin-bottom"
+            animate={{ opacity: 1, y: [0, -5, 0], rotate: 2 }}
+            transition={{
+              opacity: { duration: 0.6, delay: 1.0 },
+              y: { duration: 3.5, delay: 1.8, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 0.9, delay: 1.0 },
+            }}
+            whileHover={{ rotate: 0, y: -12, scale: 1.03, transition: { type: "spring", stiffness: 300, damping: 20 } }}
+            className="shrink-0 hidden md:block mb-10 scale-105 origin-bottom"
           >
             <MockStory />
           </motion.div>
@@ -363,16 +374,16 @@ export default function LandingPage() {
           {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-4 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-4 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col sm:flex-row items-center gap-6 overflow-hidden h-full">
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">DM RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">DM RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Love <span className="font-cursive italic font-normal">confessions</span>
                   </h3>
@@ -380,45 +391,53 @@ export default function LandingPage() {
                     AI writes a heartfelt confession and DMs it to whoever the wheel picks. Unhinged. Real.
                   </p>
                 </div>
-                <div className="shrink-0 scale-[0.88] origin-center">
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="shrink-0 scale-[0.88] origin-center"
+                >
                   <MockDM />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-2 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-2 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col items-center text-center overflow-hidden h-full">
-                <p className="text-[11px] font-semibold text-pink/60 mb-3 tracking-wider">STORY RITUAL</p>
+                <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} viewport={{ once: true }} className="text-[11px] font-semibold text-pink/60 mb-3 tracking-wider">STORY RITUAL</motion.p>
                 <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                   Story <span className="font-cursive italic font-normal">posts</span>
                 </h3>
                 <p className="text-sm text-zinc-600 leading-relaxed mb-6">
                   Force embarrassing content onto their story.
                 </p>
-                <div className="scale-[0.72] origin-center -mb-24">
+                <motion.div
+                  animate={{ y: [0, -3, 0], rotate: [0, 1, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                  className="scale-[0.72] origin-center -mb-24"
+                >
                   <MockStory />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 flex flex-col sm:flex-row items-center gap-6 overflow-hidden h-full">
                 <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <p className="text-[11px] font-semibold text-gold/60 mb-3 tracking-wider">COMMENT RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} viewport={{ once: true }} className="text-[11px] font-semibold text-gold/60 mb-3 tracking-wider">COMMENT RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Reel <span className="font-cursive italic font-normal">comments</span>
                   </h3>
@@ -426,23 +445,27 @@ export default function LandingPage() {
                     Leave unhinged comments on public reels from their account.
                   </p>
                 </div>
-                <div className="shrink-0 scale-[0.72] origin-center -mb-32 sm:mb-0 sm:-mr-4">
+                <motion.div
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="shrink-0 scale-[0.72] origin-center -mb-32 sm:mb-0 sm:-mr-4"
+                >
                   <MockComment />
-                </div>
+                </motion.div>
               </div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-3 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7 h-full">
                 <div className="text-center mb-5">
-                  <p className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">CHAOS RITUAL</p>
+                  <motion.p initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.35 }} viewport={{ once: true }} className="text-[11px] font-semibold text-rose/60 mb-3 tracking-wider">CHAOS RITUAL</motion.p>
                   <h3 className="text-xl font-bold text-zinc-900 tracking-tight mb-2">
                     Ex <span className="font-cursive italic font-normal">interactions</span>
                   </h3>
@@ -451,32 +474,35 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <div className="max-w-xs mx-auto space-y-1.5">
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> liked a photo</p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:47am</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> commented: &quot;i miss this&quot;</p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:48am</p>
-                  </div>
-                  <div className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
-                    <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> followed <span className="font-medium text-zinc-700">@your_ex</span></p>
-                    <p className="text-[10px] text-zinc-300 shrink-0">3:49am</p>
-                  </div>
+                  {[
+                    { action: "liked a photo", time: "3:47am", delay: 0.3 },
+                    { action: 'commented: "i miss this"', time: "3:48am", delay: 0.4 },
+                    { action: "followed @your_ex", time: "3:49am", delay: 0.5 },
+                  ].map((item, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -15 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      transition={{ delay: item.delay, duration: 0.4 }}
+                      viewport={{ once: true }}
+                      className="bg-zinc-50 rounded-lg px-3.5 py-2.5 flex items-center gap-3"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-beige to-gold shrink-0" />
+                      <p className="text-xs text-zinc-600 flex-1"><span className="font-medium text-zinc-700">your_account</span> {item.action}</p>
+                      <p className="text-[10px] text-zinc-300 shrink-0">{item.time}</p>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              viewport={{ once: true }}
-              whileHover={{ y: -3 }}
-              className="md:col-span-6 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)]"
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -5, boxShadow: "0 12px 40px -8px rgba(227,107,138,0.15)" }}
+              className="md:col-span-6 rounded-[20px] bg-white border border-zinc-200/70 p-[1px] shadow-[0_2px_20px_-6px_rgba(227,107,138,0.08)] transition-shadow"
             >
               <div className="rounded-[19px] bg-gradient-to-b from-cream-light to-white border border-white/80 p-7">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">

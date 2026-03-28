@@ -4,99 +4,99 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ShotTaker is a Chrome Extension (Manifest V3) that overlays a Tinder-style swipe UI on Instagram. Users swipe right to "shoot their shot" (send a DM) or left to pass. It fetches profiles from Instagram's internal API using the browser's existing session cookies.
+shame.ai is a multiplayer social dare game. Players spin roulettes that pick a victim, a ritual (embarrassing Instagram action), and a target. Rituals include DM love confessions, posting to stories, commenting on reels, and interacting with exes. The project has two components: a Next.js web app for the game UI and a Supabase backend for multiplayer rooms.
 
 ## Development
 
-No build step — plain JavaScript, CSS, and HTML. Load as an unpacked Chrome extension:
+### Web App (`webapp/`)
 
-1. Go to `chrome://extensions/` → enable Developer Mode
-2. Click "Load unpacked" → select the repo root (or `extension/` for the alternate version)
-3. Navigate to instagram.com to see the overlay
-
-No tests, linter, or package manager for the extension itself.
-
-## Backend Testing (test/)
-
-Python scripts for testing Instagram API calls outside the browser. Requires `python-dotenv`.
+Next.js 16.2.1 with React 19, Tailwind CSS 4, TypeScript. **Note:** This Next.js version has breaking changes from training data — read `node_modules/next/dist/docs/` before writing code.
 
 ```bash
-# Setup
-cp .env.example .env   # then fill in your IG session cookies from DevTools
-pip install python-dotenv
-
-# Run the interactive pipeline simulation
-python3 test/simulate.py
-
-# Run individual API tests
-python3 test/test_api.py
-python3 test/test_followers.py
+cd webapp
+npm install
+npm run dev          # http://localhost:3000
+npm run build        # production build
+npm run lint         # ESLint
 ```
 
-Credentials live in `.env` (gitignored). `test/config.py` reads them via `dotenv` and exports `ACCOUNTS`, `GRAPHQL_TOKENS`, `SHARED_HEADERS`. Other test files import from `config.py`.
+Node.js must be in PATH. If not, prefix with: `export PATH="/c/Program Files/nodejs:$PATH"`
 
-### Story Upload Pipeline (instagrapi)
+### Supabase Multiplayer (`supabase/`)
 
-Separate from the cookie-based test scripts. Uses `instagrapi` for username/password login with mobile device simulation.
+Edge Functions in Deno TypeScript. Requires Docker for local dev.
 
 ```bash
+supabase start                          # local stack (API :54321, Studio :54323)
+supabase functions deploy               # deploy all Edge Functions
+supabase db push                        # push migrations
+supabase link --project-ref <REF>       # link to remote project
+```
+
+### Instagram API Testing (`test/`)
+
+Python scripts for testing Instagram API calls. Requires `python-dotenv` + `instagrapi`.
+
+```bash
+cp .env.example .env                    # fill in IG session cookies
 pip install -r requirements.txt
-
-# Add IG_USERNAME and IG_PASSWORD to .env, then:
-python3 test/ig_story.py photo.jpg
-python3 test/ig_story.py video.mp4 "caption here"
+python3 test/simulate.py                # interactive pipeline
+python3 test/test_api.py                # individual API tests
+python3 test/ig_story.py photo.jpg      # story upload (needs IG_USERNAME/IG_PASSWORD)
 ```
 
-- `test/ig_auth.py` — Auth module. Handles login, session persistence (`test/session.json`), device fingerprinting, and interactive 2FA challenge handling.
-- `test/ig_story.py` — CLI for uploading photo/video Stories.
+### Multiplayer CLI Testing (`scripts/`)
+
+```bash
+scripts/shame-mp create                 # create room
+scripts/shame-mp join W232LZ            # join by code
+scripts/shame-mp start                  # host starts round
+scripts/shame-mp state                  # view room state
+```
 
 ## Rules
 
-When adding or changing any feature in the extension (new API endpoint, new data flow, new logic), ALWAYS add a corresponding implementation in `test/` so it can be tested outside the browser. The `test/` scripts are the backend mirror of the extension — keep them in sync.
+- Supabase shared code goes in `supabase/_shared/`, NOT under `supabase/functions/` (breaks deployment).
+- All Supabase tables have RLS enabled with no public policies — only Edge Functions (service_role) access the DB.
+- The webapp uses `motion` (framer-motion) for animations with spring physics. Use `type: "spring"` transitions, not linear easing.
+- Colour palette: rose (`#E36B8A`), pink (`#F08DA0`), blush (`#F2C4CB`), gold (`#C4A265`), beige (`#D4BC96`), cream (`#EDE8C8`). Defined in `webapp/app/globals.css`.
+- Font stack: Geist (sans), Playfair Display (cursive accents via `font-cursive` class). Inter is banned.
 
 ## Architecture
 
-**Content scripts** (injected into instagram.com pages in this order per manifest):
+### Web App (`webapp/`)
 
-1. `instagram-api.js` — IIFE exposing `InstagramAPI` global. Wraps IG internal REST endpoints (`/api/v1/...`) with rate-limited fetch (2.5s minimum between calls, 30s backoff on 429). Handles: suggested users, explore profiles, profile info enrichment, following lists, and DM sending.
-2. `swipe-ui.js` — IIFE exposing `SwipeUI` global. Renders the draggable card stack with mouse/touch gesture handling. Swipe threshold is 100px.
-3. `content.js` — Main orchestrator. Injects `interceptor.js` into page context, loads persisted state from `chrome.storage.local`, wires swipe callbacks to API calls, and manages the profile loading pipeline (fetch → filter seen/private → deduplicate → enrich top 20).
+**Routes:** `/` (landing), `/login` (Instagram auth), `/app` (roulette game), `/room` (multiplayer lobby), `/history`, `/settings`
 
-**Other files:**
+**API routes:** `/api/auth/{login,verify,checkpoint,browser}`, `/api/generate`, `/api/dm`, `/api/follow`, `/api/profiles`, `/api/relationship`, `/api/enrich`
 
-- `interceptor.js` — Injected into IG's page context (not content script world). Monkey-patches `window.fetch` to passively capture API responses via `postMessage` with type `ST_DATA`.
-- `background.js` — Service worker. Manages shot history (capped at 500), pending follow-backs (48h timeout, polled every 5min via `chrome.alarms`), DM retries (max 3 attempts), and Azure OpenAI message generation. Delegates API calls back to the Instagram tab via messaging.
-- `popup.html` / `popup.js` — Extension popup for settings (DM template, rate limit, profile sources) and shot history display.
-- `styles.css` — All swipe UI styling.
+**Key libs:**
+- `lib/instagram.ts` — Server-side IG API wrapper
+- `lib/azure.ts` — Azure OpenAI message generation
+- `lib/rituals.ts` — 10 ritual templates with prompts
+- `lib/multiplayer-api.ts` — Supabase Edge Function client
+- `lib/multiplayer-session.ts` — localStorage session (room_id, tokens)
+- `lib/browser-auth.ts` — Playwright-based Instagram login
+- `lib/session.ts` — iron-session server cookies
+- `lib/rate-limiter.ts` — Split rate limiting (500ms reads, 3s writes, 30s backoff on 429)
 
-### Key data flows
+### Supabase Backend (`supabase/`)
 
-**GraphQL token acquisition** — Required for DM sending via the modern GraphQL endpoint:
+**Tables:** `deed_templates` (weighted ritual pool), `rooms`, `room_players`, `rounds`
 
-1. `interceptor.js` (page context) watches outgoing IG GraphQL requests for `fb_dtsg` + `lsd` params
-2. Sends them via `postMessage` with type `ST_TOKENS` to content script world
-3. `content.js` passes tokens to `InstagramAPI.setGraphQLTokens()`
-4. `sendDMGraphQL()` uses these tokens; if unavailable, falls back to the legacy REST `sendDM()` endpoint
+**Edge Functions (all POST, JSON):**
+- `create-room` — Host creates game, gets host_secret + player_token + short_code
+- `join-room` — Join via short_code or invite_token
+- `heartbeat` — Player keepalive (90s ready window)
+- `start-round` — Host triggers random deed + victim selection
+- `submit-result` — Victim submits ok/skipped/error
+- `room-state` — Full room sync (last 50 rounds)
+- `close-room` — Host ends game
 
-**Content script load order matters** — `instagram-api.js` and `swipe-ui.js` expose `InstagramAPI` and `SwipeUI` as globals that `content.js` depends on. The manifest `js` array order controls this.
+Auth: token hashes in DB, raw tokens held client-side only. See `supabase/API.md` for full endpoint docs.
 
-### Message protocol
+### Key Data Flows
 
-All inter-component communication uses `chrome.runtime.sendMessage` or `window.postMessage`:
+**Multiplayer game loop:** Host `create-room` → guests `join-room` via short_code → all players `heartbeat` → host `start-round` (picks random ready victim + weighted deed) → victim `submit-result` → all poll `room-state`.
 
-- `ST_TOKENS` — interceptor → content script (GraphQL auth tokens)
-- `ST_DATA` — interceptor → content script (passive API data)
-- `ST_SETTINGS_UPDATE` / `ST_TOGGLE` — popup → content script
-- `ST_GET_STATUS` — popup → content script
-- `ST_SHOT_SENT` / `ST_GET_HISTORY` / `ST_RESET` — content script ↔ background
-- `ST_ADD_PENDING` / `ST_GET_PENDING` / `ST_CHECK_PENDING` — content script ↔ background (follow-back tracking)
-- `ST_EXEC_CHECK_FOLLOWS` / `ST_EXEC_SEND_DM` / `ST_EXEC_UNFOLLOW` — background → content script (delegated API calls)
-- `ST_GENERATE_MESSAGE` — popup → background (Azure OpenAI message generation)
-
-### Storage keys (chrome.storage.local)
-
-All prefixed with `st_`: `st_settings`, `st_seen`, `st_shot_history`, `st_dms_hour`, `st_dms_reset`, `st_pending_follows`.
-
-### Rate limiting
-
-`InstagramAPI` uses split rate limiting: 500ms between reads (profile lookups, followers, explore) and 3s between writes (DMs, follows, unfollows), with automatic 30s backoff on HTTP 429. DM sends are additionally capped per hour (default 10, configurable in popup) with the counter persisted in `chrome.storage.local` and reset after 1 hour.
+**Instagram auth:** User logs in via Playwright browser automation (`/api/auth/browser`) → session stored server-side with iron-session → API routes proxy Instagram calls with the stored session cookies.
