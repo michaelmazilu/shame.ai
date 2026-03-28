@@ -251,8 +251,7 @@ async function processPendingFollows() {
 
 // ── Azure OpenAI Message Generation ──
 
-const AZURE_ENDPOINT =
-  "https://somethingtuff.cognitiveservices.azure.com/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2025-01-01-preview";
+importScripts("secrets.js");
 
 const TONE_PROMPTS = {
   casual:
@@ -264,9 +263,6 @@ const TONE_PROMPTS = {
   professional:
     "Tone: warm but professional. Like a friendly LinkedIn message, not corporate.",
 };
-
-const AZURE_API_KEY =
-  "REDACTED";
 
 async function generateMessage(tone) {
   const toneGuide = TONE_PROMPTS[tone] || TONE_PROMPTS.casual;
