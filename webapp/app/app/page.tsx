@@ -9,6 +9,9 @@ export default function AppPage() {
           shame<span className="text-rose">.ai</span>
         </Link>
         <div className="flex items-center gap-4">
+          <Link href="/room" className="text-xs text-rose font-medium hover:text-rose-dark transition">
+            Group room
+          </Link>
           <Link href="/history" className="text-xs text-zinc-400 hover:text-zinc-900 transition">
             History
           </Link>

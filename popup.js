@@ -1,6 +1,25 @@
 // popup.js — Settings popup logic
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const lobbyUrl = document.getElementById("lobby-url");
+  const lobbyOpen = document.getElementById("lobby-open");
+  if (lobbyUrl && lobbyOpen) {
+    chrome.storage.local.get(["st_lobby_url"], (d) => {
+      const v =
+        d.st_lobby_url || "http://localhost:3000/room";
+      lobbyUrl.value = v;
+      lobbyOpen.href = v;
+    });
+    lobbyUrl.addEventListener("input", () => {
+      const v = lobbyUrl.value.trim() || "http://localhost:3000/room";
+      lobbyOpen.href = v;
+    });
+    lobbyUrl.addEventListener("change", () => {
+      const v = lobbyUrl.value.trim() || "http://localhost:3000/room";
+      chrome.storage.local.set({ st_lobby_url: v });
+    });
+  }
+
   const toggleEnabled = document.getElementById("toggle-enabled");
   const dmTemplate = document.getElementById("dm-template");
   const maxDMs = document.getElementById("max-dms");

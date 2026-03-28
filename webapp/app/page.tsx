@@ -36,10 +36,10 @@ export default function LandingPage() {
           </Link>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link
-              href="/login"
+              href="/room"
               className="text-sm font-semibold px-5 py-2.5 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block"
             >
-              Get started
+              Group room
             </Link>
           </motion.div>
         </div>
@@ -106,6 +106,12 @@ export default function LandingPage() {
                   </motion.span>
                 </Link>
               </motion.div>
+              <Link
+                href="/room"
+                className="text-xs font-medium text-rose hover:underline"
+              >
+                Play with friends →
+              </Link>
               <span className="text-xs text-zinc-400">Free. No cap. Literally.</span>
             </motion.div>
           </div>

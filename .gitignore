@@ -1,6 +1,9 @@
 .env
+.env.local
+.env.*.local
 .venv/
 .claude/
 __pycache__/
 test/session.json
+.shame-ai-session.json
 secrets.js
