@@ -227,100 +227,17 @@ export default function LandingPage() {
           <Link href="/login" className="text-sm font-medium text-zinc-400 hover:text-zinc-900 transition-colors">
             Log in
           </Link>
-<<<<<<< Updated upstream
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              href="/room"
-              className="text-sm font-semibold px-5 py-2.5 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block"
-            >
-              Group room
-=======
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
             <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-zinc-900 text-white rounded-full hover:bg-zinc-800 transition-colors inline-block">
               Get started
->>>>>>> Stashed changes
             </Link>
           </motion.div>
         </div>
       </motion.nav>
 
       {/* Hero */}
-<<<<<<< Updated upstream
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Left */}
-          <div className="lg:col-span-7">
-            <motion.p
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-sm font-semibold text-rose tracking-wide uppercase mb-4"
-            >
-              For friend groups with no boundaries
-            </motion.p>
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-zinc-900 leading-[1.05]"
-            >
-              The AI that<br />
-              humiliates your<br />
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.6, type: "spring", stiffness: 200, damping: 15 }}
-                className="text-rose inline-block"
-              >
-                friends for you
-              </motion.span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="mt-6 text-lg text-zinc-500 max-w-lg leading-relaxed"
-            >
-              Three roulette spins. One picks the victim. One picks the
-              ritual. One picks the target. All connected to Instagram.
-              No mercy.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="mt-8 flex items-center gap-4"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-7 py-3.5 bg-pink text-white font-semibold rounded-full hover:bg-rose transition-colors text-sm"
-                >
-                  Start shaming
-                  <motion.span
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    aria-hidden="true"
-                  >
-                    &rarr;
-                  </motion.span>
-                </Link>
-              </motion.div>
-              <Link
-                href="/room"
-                className="text-xs font-medium text-rose hover:underline"
-              >
-                Play with friends →
-              </Link>
-              <span className="text-xs text-zinc-400">Free. No cap. Literally.</span>
-            </motion.div>
-          </div>
-
-          {/* Right — ritual preview card */}
-=======
       <section className="max-w-5xl mx-auto px-6 pt-14 pb-16 relative z-10">
         <div className="flex flex-col items-center text-center">
->>>>>>> Stashed changes
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -397,7 +314,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Mockup cards — staggered heights */}
+        {/* Mockup cards */}
         <div className="mt-12 flex items-end justify-center gap-5 overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 60, rotate: -2 }}
@@ -454,7 +371,6 @@ export default function LandingPage() {
 
           {/* Bento grid */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-            {/* DM confessions — 4 col */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -479,7 +395,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Story posts — 2 col */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -502,7 +417,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Reel comments — 3 col */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -527,7 +441,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Ex interactions — 3 col */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -566,7 +479,6 @@ export default function LandingPage() {
               </div>
             </motion.div>
 
-            {/* Camera roll + thirst traps — full width with roulette */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
