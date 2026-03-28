@@ -68,7 +68,20 @@
       "Bash(node test/test_fresh_cookies.js)",
       "Bash(.venv/bin/python test/punishment_bio.py)",
       "Bash(.venv/bin/python test/punishment_pfp.py)",
-      "Bash(.venv/bin/python test/punishment_cringe_comment.py)"
+      "Bash(.venv/bin/python test/punishment_cringe_comment.py)",
+      "Bash(railway whoami:*)",
+      "Bash(openssl rand:*)",
+      "Bash(railway init:*)",
+      "Bash(railway variables:*)",
+      "Bash(railway service:*)",
+      "Bash(railway up:*)",
+      "Bash(railway status:*)",
+      "Bash(railway api:*)",
+      "Bash(railway --help)",
+      "Bash(railway domain:*)",
+      "Bash(railway logs:*)",
+      "Bash(curl -s https://gregarious-spontaneity-production.up.railway.app/health)",
+      "Bash(vercel whoami:*)"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude",
