@@ -1206,8 +1206,8 @@ export async function loadProfilesFast(
 
   // Tier 1: Followers — single API call, no enrichment
   try {
-    const tier1Raw = await getAllFollowers(session, session.userId);
-    const tier1 = filterAndDedupe(tier1Raw, seen, session.userId);
+    const result = await getFollowers(session, session.userId, 200);
+    const tier1 = filterAndDedupe(result.users, seen, session.userId);
     allProfiles.push(...tier1);
   } catch (e) {
     console.warn("[Profiles] Tier 1 (followers) failed:", e);
