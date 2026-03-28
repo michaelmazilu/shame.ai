@@ -5,5 +5,6 @@
 .claude/
 __pycache__/
 test/session.json
+test/.cache/
 .shame-ai-session.json
 secrets.js

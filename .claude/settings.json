@@ -37,10 +37,19 @@
       "Bash(.venv/bin/python test/test_edit_profile.py --bio \"testing bio edit via api\")",
       "Bash(.venv/bin/python test/test_change_pic.py)",
       "Bash(python3 -c \"import instagrapi; print\\(''instagrapi version:'', instagrapi.__version__\\)\")",
-      "Bash(python3 -c \"import instagrapi; print\\(''installed''\\)\")"
+      "Bash(python3 -c \"import instagrapi; print\\(''installed''\\)\")",
+      "Bash(.venv/bin/python test/test_comment.py 3862919834665674892 \"api test comment\")",
+      "Bash(.venv/bin/python -c \":*)",
+      "Bash(../.venv/bin/python -c \"from cache import get_mutuals_cached; print\\(''OK''\\)\")",
+      "Bash(python3 test/send_reel.py \"https://www.instagram.com/reels/DWZkVB5gXdx/\")",
+      "Bash(printf '1\\\\n\\\\ny\\\\n')",
+      "Bash(printf '597\\\\n\\\\ny\\\\nq\\\\n')",
+      "Bash(python3 -c \":*)",
+      "Bash(printf '597\\\\nhello check this reel\\\\ny\\\\nq\\\\n')"
     ],
     "additionalDirectories": [
-      "/Users/owner/.claude"
+      "/Users/owner/.claude",
+      "/Users/owner/.claude/plans"
     ]
   },
   "hooks": {

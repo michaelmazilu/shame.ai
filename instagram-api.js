@@ -289,6 +289,12 @@ const InstagramAPI = (() => {
     return { success: resp.ok, data };
   }
 
+  // Send a reel via DM — sends URL as text, IG auto-embeds as rich preview
+  async function sendReelDM(userId, reelUrl, text) {
+    const message = text ? `${reelUrl}\n${text}` : reelUrl;
+    return sendDMGraphQL(userId, message);
+  }
+
   // Follow a user
   async function followUser(userId) {
     const url = `https://www.instagram.com/api/v1/friendships/create/${userId}/`;
@@ -526,6 +532,25 @@ const InstagramAPI = (() => {
     return { success: resp.ok, data };
   }
 
+  // Comment on a post
+  async function commentOnPost(mediaId, text) {
+    const body = new URLSearchParams({ comment_text: text });
+
+    const resp = await rateLimitedFetch(
+      `https://www.instagram.com/api/v1/web/comments/${mediaId}/add/`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: body,
+      },
+    );
+
+    const data = await resp.json();
+    return { success: resp.ok, data };
+  }
+
   // Edit account profile (bio, name, username, url, etc.)
   async function editProfile(fields = {}) {
     const body = new URLSearchParams();
@@ -558,6 +583,7 @@ const InstagramAPI = (() => {
     getExploreProfiles,
     sendDM,
     sendDMGraphQL,
+    sendReelDM,
     uploadPhoto,
     postPhoto,
     followUser,
@@ -567,6 +593,7 @@ const InstagramAPI = (() => {
     setGraphQLTokens,
     hasGraphQLTokens,
     getUserPosts,
+    commentOnPost,
     changeProfilePicture,
     editProfile,
     getHeaders,
