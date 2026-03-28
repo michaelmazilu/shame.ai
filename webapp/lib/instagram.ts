@@ -471,7 +471,17 @@ export async function hydrateInstagramUsername(session: IGSession): Promise<void
       user?: { username?: string };
       username?: string;
     };
-    const u = data?.user?.username ?? data?.username;
+    let u = data?.user?.username ?? data?.username;
+    if (typeof u === "string" && u.trim()) {
+      session.username = u.trim();
+    }
+  } catch {
+    /* non-fatal */
+  }
+  if (session.username?.trim()) return;
+  try {
+    const form = await getProfileFormData(session);
+    const u = form?.username;
     if (typeof u === "string" && u.trim()) {
       session.username = u.trim();
     }

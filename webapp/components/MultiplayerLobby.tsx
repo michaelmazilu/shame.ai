@@ -27,6 +27,19 @@ import {
 const POLL_MS = 2500;
 const HEARTBEAT_MS = 12000;
 
+/** Numeric-only = IG pk when handle hydration failed — avoid misleading @ prefix. */
+function IgAccountInline({ handle }: { handle: string }) {
+  const t = handle.trim();
+  if (/^\d+$/.test(t)) {
+    return (
+      <>
+        IG account <strong className="text-zinc-700">{t}</strong>
+      </>
+    );
+  }
+  return <strong className="text-zinc-700">@{t}</strong>;
+}
+
 type Props = {
   igUsername: string;
 };
@@ -335,7 +348,7 @@ export default function MultiplayerLobby({ igUsername }: Props) {
         </p>
         <p className="text-zinc-500 text-xs leading-relaxed">
           Add Supabase keys so the room can sync (Edge Functions). You&apos;re
-          signed in as <strong className="text-zinc-700">@{igUsername}</strong>.
+          signed in as <IgAccountInline handle={igUsername} />.
         </p>
         <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
           {`SUPABASE_URL=
@@ -362,9 +375,8 @@ SUPABASE_PUBLISHABLE_KEY=`}
             Group <span className="text-rose">room</span>
           </h1>
           <p className="text-xs text-zinc-500">
-            Signed in as{" "}
-            <span className="font-medium text-zinc-700">@{igUsername}</span> —
-            punishments use this Instagram account.
+            Signed in as <IgAccountInline handle={igUsername} /> — punishments
+            use this Instagram account.
           </p>
           <p className="text-sm text-zinc-500 mt-2">
             Live room synced via Supabase (same API as{" "}
@@ -454,7 +466,13 @@ SUPABASE_PUBLISHABLE_KEY=`}
           <Link href="/" className="text-sm font-bold text-zinc-900">
             shame<span className="text-rose">.ai</span>
           </Link>
-          <p className="text-[10px] text-zinc-400 mt-0.5">@{igUsername}</p>
+          <p className="text-[10px] text-zinc-400 mt-0.5">
+            {/^\d+$/.test(igUsername.trim()) ? (
+              <>IG {igUsername.trim()}</>
+            ) : (
+              <>@{igUsername.trim()}</>
+            )}
+          </p>
         </div>
         <button
           type="button"
