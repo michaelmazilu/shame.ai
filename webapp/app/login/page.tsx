@@ -3,8 +3,36 @@
 import LoginForm from "@/components/LoginForm";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/check")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.loggedIn) {
+          localStorage.setItem("st_username", data.username || "");
+          localStorage.setItem("st_userId", data.userId || "");
+          router.replace("/app");
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
+
+  if (checking) {
+    return (
+      <main className="min-h-dvh bg-cream flex items-center justify-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="w-8 h-8 border-2 border-blush border-t-rose rounded-full" />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-dvh bg-cream flex">
       {/* Left panel — branding */}
