@@ -2,14 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { mergeParentEnvLocalIntoProcess } from "./merge-parent-env-local";
 
-let reconciledProcessEnvForMp = false;
-
-function ensureParentEnvForMp(): void {
-  if (reconciledProcessEnvForMp) return;
-  reconciledProcessEnvForMp = true;
-  mergeParentEnvLocalIntoProcess();
-}
-
 /**
  * Env for `/api/mp/*` proxy. Merges `process.env` with on-disk `.env.local`
  * (webapp + repo root). Next can inject empty `SUPABASE_*=` from webapp while
@@ -110,7 +102,9 @@ function readParentEnvLocal(): Record<string, string> {
 }
 
 export function getMpServerEnv(): { url: string; key: string } {
-  ensureParentEnvForMp();
+  // Re-run every call: Next may load `webapp/.env.local` with empty `KEY=`
+  // after a one-time merge, which would leave process.env stuck empty.
+  mergeParentEnvLocalIntoProcess();
   const web = readWebappEnvLocal();
   const parent = readParentEnvLocal();
 
