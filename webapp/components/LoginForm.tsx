@@ -15,8 +15,14 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
 
-  const [twoFactorInfo, setTwoFactorInfo] = useState<Record<string, string> | null>(null);
-  const [checkpointInfo, setCheckpointInfo] = useState<Record<string, string> | null>(null);
+  const [twoFactorInfo, setTwoFactorInfo] = useState<Record<
+    string,
+    string
+  > | null>(null);
+  const [checkpointInfo, setCheckpointInfo] = useState<Record<
+    string,
+    string
+  > | null>(null);
 
   function onSuccess(data: { username?: string; userId: string }) {
     localStorage.setItem("st_username", data.username || "");
@@ -56,7 +62,8 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const resp = await fetch("/api/auth/login", {
+      // Try Playwright server first (Railway), fall back to REST login
+      const resp = await fetch("/api/auth/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -161,7 +168,11 @@ export default function LoginForm() {
         </button>
         <button
           type="button"
-          onClick={() => { setStep("credentials"); setCode(""); setError(""); }}
+          onClick={() => {
+            setStep("credentials");
+            setCode("");
+            setError("");
+          }}
           className="text-sm text-zinc-400 hover:text-zinc-900 transition-colors"
         >
           Back to login

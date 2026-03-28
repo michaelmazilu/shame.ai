@@ -453,7 +453,9 @@ export async function checkRelationship(session: IGSession, userId: string) {
  * Browser login often leaves username empty (accounts/edit scrape fails).
  * This endpoint fills it so server-side checks (e.g. /room, /api/auth/me) work.
  */
-export async function hydrateInstagramUsername(session: IGSession): Promise<void> {
+export async function hydrateInstagramUsername(
+  session: IGSession,
+): Promise<void> {
   if (session.username?.trim()) return;
   try {
     const resp = await fetch(`${BASE}/api/v1/accounts/current_user/`, {
@@ -1199,7 +1201,7 @@ export async function loadProfilesFast(
 
   // Tier 1: Followers — single API call, no enrichment
   try {
-    const result = await getFollowers(session, session.userId, 50);
+    const result = await getFollowers(session, session.userId, 100);
     const tier1 = filterAndDedupe(result.users, seen, session.userId);
     allProfiles.push(...tier1);
   } catch (e) {

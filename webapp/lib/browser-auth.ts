@@ -26,7 +26,12 @@ export async function launchInstagramLogin(): Promise<{
 
   const browser = await chromium.launch({
     headless: false,
-    args: ["--disable-blink-features=AutomationControlled"],
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--auto-open-devtools-for-tabs=false",
+      "--window-position=200,100",
+      "--window-size=420,760",
+    ],
   });
 
   try {
@@ -38,6 +43,7 @@ export async function launchInstagramLogin(): Promise<{
     });
 
     const page = await context.newPage();
+    await page.bringToFront();
     await page.goto("https://www.instagram.com/accounts/login/", {
       waitUntil: "networkidle",
     });
@@ -91,31 +97,7 @@ export async function launchInstagramLogin(): Promise<{
       }, 1000);
     });
 
-    // Try to get the username from the logged-in page
-    if (session) {
-      try {
-        await page.goto("https://www.instagram.com/accounts/edit/", {
-          waitUntil: "networkidle",
-          timeout: 10000,
-        });
-        const usernameInput = await page.$('input[name="username"]');
-        if (usernameInput) {
-          session.username = (await usernameInput.inputValue()) || "";
-        }
-      } catch {
-        // fallback: extract from cookie or page
-        try {
-          const profileLink = await page.$('a[href*="/accounts/"]');
-          if (profileLink) {
-            const href = await profileLink.getAttribute("href");
-            if (href) session.username = href.replace(/\//g, "");
-          }
-        } catch {
-          // username will be empty, not critical
-        }
-      }
-    }
-
+    // Close the browser immediately — don't keep it open
     await browser.close();
 
     if (!session) {
