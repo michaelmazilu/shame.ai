@@ -205,7 +205,7 @@ export async function getSuggestedUsers(
   const url = `${BASE}/api/v1/discover/ayml/`;
   const resp = await igFetch(url, session);
   const text = await resp.text();
-  let data: Record<string, unknown>;
+  let data: any;
   try {
     data = JSON.parse(text);
   } catch {
@@ -216,7 +216,7 @@ export async function getSuggestedUsers(
     return [];
   }
 
-  const groups = data?.groups || [];
+  const groups = (data?.groups || []) as Array<{ items?: Array<{ user?: Record<string, any>; social_context?: unknown }> }>;
   const users: IGProfile[] = [];
 
   for (const group of groups) {

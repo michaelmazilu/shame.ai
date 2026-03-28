@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { IGProfile } from "@/lib/types";
 import { RITUALS, type Ritual } from "@/lib/rituals";
+import { useTargetPool } from "./useTargetPool";
 
 function loadStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -49,8 +50,10 @@ export interface RouletteState {
 }
 
 export function useRouletteState(): RouletteState {
-  const [profiles, setProfiles] = useState<IGProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const pool = useTargetPool();
+  const profiles = pool.targets;
+  const loading = pool.loading;
+
   const [phase, setPhase] = useState<Phase>("idle");
 
   const [victim, setVictim] = useState<IGProfile | null>(null);
@@ -67,36 +70,14 @@ export function useRouletteState(): RouletteState {
 
   const [message, setMessage] = useState("");
   const [messageLoading, setMessageLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(pool.error);
   const [statusText, setStatusText] = useState("");
 
   const messageGenerated = useRef(false);
 
-  // Load profiles
   useEffect(() => {
-    async function fetchProfiles() {
-      setLoading(true);
-      const seen = loadStorage<string[]>("st_seen", []);
-      try {
-        const resp = await fetch("/api/profiles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seen, sources: { suggested: true, explore: true, friendsOfFriends: true } }),
-        });
-        if (resp.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-        const data = await resp.json();
-        if (data.profiles?.length) setProfiles(data.profiles);
-      } catch {
-        setError("Failed to load profiles");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProfiles();
-  }, []);
+    if (pool.error) setError(pool.error);
+  }, [pool.error]);
 
   // Check if all wheels locked → transition to result
   useEffect(() => {
@@ -232,6 +213,8 @@ export function useRouletteState(): RouletteState {
   }, [target, victim, ritual, message]);
 
   const reset = useCallback(() => {
+    if (victim) pool.markUsed(victim.id);
+    if (target && target.id !== victim?.id) pool.markUsed(target.id);
     setPhase("idle");
     setVictim(null);
     setRitual(null);
@@ -243,9 +226,7 @@ export function useRouletteState(): RouletteState {
     setError("");
     setStatusText("");
     messageGenerated.current = false;
-    // Remove used profiles from pool
-    setProfiles((prev) => prev.filter((p) => p.id !== victim?.id && p.id !== target?.id));
-  }, [victim, target]);
+  }, [victim, target, pool]);
 
   return {
     profiles, loading, phase,

@@ -27,7 +27,7 @@ async function loginViaPlaywrightServer(username: string, password: string) {
   }
   return data as {
     success: boolean;
-    session: typeof import("@/lib/types").IGSession extends never ? never : any;
+    session: Record<string, unknown>;
   };
 }
 
