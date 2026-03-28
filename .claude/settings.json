@@ -45,7 +45,15 @@
       "Bash(printf '1\\\\n\\\\ny\\\\n')",
       "Bash(printf '597\\\\n\\\\ny\\\\nq\\\\n')",
       "Bash(python3 -c \":*)",
-      "Bash(printf '597\\\\nhello check this reel\\\\ny\\\\nq\\\\n')"
+      "Bash(printf '597\\\\nhello check this reel\\\\ny\\\\nq\\\\n')",
+      "Bash(python -c \"import test.test_all; print\\(''''imports ok''''\\)\")",
+      "Bash(python test/test_all.py --help)",
+      "Bash(python -c \":*)",
+      "Bash(timeout 5 python test/test_all.py)",
+      "Bash(python test/test_all.py)",
+      "Bash(.venv/bin/python test/test_all.py)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(python -c \"from server.main import app; print\\(f''Routes: {len\\(app.routes\\)}''\\)\")"
     ],
     "additionalDirectories": [
       "/Users/owner/.claude",

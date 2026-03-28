@@ -1,2 +1,7 @@
 python-dotenv
 instagrapi
+fastapi
+uvicorn[standard]
+pydantic-settings
+requests
+openai
