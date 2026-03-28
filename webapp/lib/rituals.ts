@@ -43,10 +43,10 @@ export const RITUALS: Ritual[] = [
     id: "reel_comment",
     name: "Reel Roast",
     emoji: "🎬",
-    description: "AI comments on a random trending reel",
+    description: "AI drops an embarrassing comment on the target's latest post",
     action: "comment",
     needsMessage: false,
-    involvesTarget: false,
+    involvesTarget: true,
     prompt: "",
   },
   {

@@ -54,7 +54,7 @@ function actionDescription(
     case "send_reel":
       return `A random reel will be sent to @${victim.username} via DM`;
     case "comment":
-      return "An AI-generated comment will be posted on a random trending reel from your account";
+      return `An AI-generated embarrassing comment will be posted on @${target.username}'s latest post`;
     case "story_image":
       return "An AI-generated meme will be posted to your Instagram story";
     case "story_reel":

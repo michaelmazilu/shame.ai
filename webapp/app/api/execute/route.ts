@@ -48,9 +48,13 @@ export async function POST(req: NextRequest) {
       }
 
       case "comment": {
-        const resp = await pythonFetch("/comment/random-reel", {
+        // Comment on the target's latest post
+        const resp = await pythonFetch("/comment/user", {
           method: "POST",
-          body: JSON.stringify({ source: "trending" }),
+          body: JSON.stringify({
+            user_id: targetId || victimId,
+            username: body.targetUsername || victimUsername,
+          }),
         });
         result = await pythonJson(resp);
         break;

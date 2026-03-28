@@ -216,21 +216,14 @@ export function useRouletteState(): RouletteState {
             );
             break;
           case "comment":
-            setStatusText("Comment dropped on a random reel");
+            setStatusText(
+              `Comment dropped on @${target?.username || victim.username}'s post`,
+            );
             break;
           case "send_reel":
             setStatusText(
               `Random reel sent to @${target?.username || victim.username}`,
             );
-            break;
-          case "story_image":
-            setStatusText("AI meme posted to your story");
-            break;
-          case "story_reel":
-            setStatusText("Reel reposted to your story");
-            break;
-          case "story_video":
-            setStatusText("AI video generation started");
             break;
         }
 
