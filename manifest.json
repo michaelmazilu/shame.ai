@@ -2,8 +2,9 @@
   "manifest_version": 3,
   "name": "ShotTaker",
   "version": "1.0.0",
-  "description": "Tinder-style swiping UI for Instagram — shoot your shot",
+  "description": "A focused swipe interface for browsing Instagram profiles and sending messages.",
   "permissions": ["storage", "activeTab", "alarms"],
+  "host_permissions": ["https://somethingtuff.cognitiveservices.azure.com/*"],
   "background": {
     "service_worker": "background.js"
   },

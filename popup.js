@@ -13,17 +13,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statSeen = document.getElementById("stat-seen");
   const statPending = document.getElementById("stat-pending");
   const btnReset = document.getElementById("btn-reset");
+  const aiTone = document.getElementById("ai-tone");
 
   // Load current settings
   chrome.storage.local.get(["st_settings", "st_seen"], (data) => {
     const s = data.st_settings || {};
     toggleEnabled.checked = s.enabled !== false;
     dmTemplate.value =
-      s.dmTemplate || "Hey! I came across your profile and had to say hi 👋";
+      s.dmTemplate ||
+      "Hey — I came across your profile and wanted to say hello.";
     maxDMs.value = s.maxDMsPerHour || 10;
     sourceSuggested.checked = s.sources?.suggested !== false;
     sourceExplore.checked = s.sources?.explore !== false;
     sourceFof.checked = s.sources?.friendsOfFriends !== false;
+    aiTone.value = s.aiTone || "casual";
 
     statSeen.textContent = (data.st_seen || []).length;
   });
@@ -96,6 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         explore: sourceExplore.checked,
         friendsOfFriends: sourceFof.checked,
       },
+      aiTone: aiTone.value,
     };
 
     chrome.storage.local.set({ st_settings: settings });
@@ -135,19 +139,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   sourceSuggested.addEventListener("change", saveSettings);
   sourceExplore.addEventListener("change", saveSettings);
   sourceFof.addEventListener("change", saveSettings);
+  aiTone.addEventListener("change", saveSettings);
 
   // Reset button
   btnReset.addEventListener("click", () => {
     if (
       confirm(
-        "Reset all ShotTaker data? This clears your swipe history and seen profiles.",
+        "Reset all ShotTaker data? This clears message history and seen profiles.",
       )
     ) {
       chrome.runtime.sendMessage({ type: "ST_RESET" }, () => {
         statShots.textContent = "0";
         statSeen.textContent = "0";
         statPending.textContent = "0";
-        historyList.innerHTML = `<div class="history-item" style="color: #8e8e8e; text-align: center;">No shots fired yet</div>`;
+        historyList.innerHTML = `<div class="history-item" style="color: #8e8e8e; text-align: center;">No messages sent yet</div>`;
         pendingList.innerHTML = `<div class="history-item" style="color: #8e8e8e; text-align: center;">No pending follows</div>`;
       });
     }

@@ -14,7 +14,8 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set({
         st_settings: {
           enabled: true,
-          dmTemplate: "Hey! I came across your profile and had to say hi 👋",
+          dmTemplate:
+            "Hey — I came across your profile and wanted to say hello.",
           maxDMsPerHour: 10,
           sources: { suggested: true, explore: true, friendsOfFriends: true },
         },
@@ -130,6 +131,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     processPendingFollows();
     sendResponse({ ok: true });
   }
+
+  // Generate a personalized DM via Azure OpenAI
+  if (msg.type === "ST_GENERATE_MESSAGE") {
+    (async () => {
+      try {
+        const data = await chromeStorageGet(["st_settings"]);
+        const s = data.st_settings || {};
+        const tone = s.aiTone || "casual";
+
+        const text = await generateMessage(tone);
+        sendResponse({ ok: true, message: text });
+      } catch (e) {
+        console.error("[ShotTaker] AI generation failed:", e);
+        sendResponse({ ok: false, error: e.message });
+      }
+    })();
+    return true;
+  }
 });
 
 // ── Pending Follow-Back Processing ──
@@ -197,7 +216,7 @@ async function processPendingFollows() {
           timestamp: now,
         });
         if (history.length > 500) history.length = 500;
-        console.log(`[ShotTaker] Shot sent to @${entry.username}!`);
+        console.log(`[ShotTaker] Message sent to @${entry.username}`);
       } else {
         entry.retries = (entry.retries || 0) + 1;
         console.warn(
@@ -228,6 +247,71 @@ async function processPendingFollows() {
   if (cleaned.length !== pending.length) {
     await chromeStorageSet({ st_pending_follows: cleaned });
   }
+}
+
+// ── Azure OpenAI Message Generation ──
+
+const AZURE_ENDPOINT =
+  "https://somethingtuff.cognitiveservices.azure.com/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2025-01-01-preview";
+
+const TONE_PROMPTS = {
+  casual:
+    "Write in a relaxed, friendly, approachable tone. Sound natural, like texting a friend.",
+  flirty:
+    "Write in a confident, playful, slightly flirtatious tone. Be charming but not over-the-top.",
+  witty:
+    "Write in a clever, humorous tone. Use wordplay or an unexpected angle to stand out.",
+  professional:
+    "Write in a polite, respectful, networking-oriented tone. Keep it warm but professional.",
+};
+
+const AZURE_API_KEY =
+  "REDACTED";
+
+async function generateMessage(tone) {
+  const toneGuide = TONE_PROMPTS[tone] || TONE_PROMPTS.casual;
+
+  const resp = await fetch(AZURE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": AZURE_API_KEY,
+    },
+    body: JSON.stringify({
+      messages: [
+        {
+          role: "system",
+          content: [
+            "You write short Instagram DM opening messages.",
+            toneGuide,
+            "Rules:",
+            "- One to two sentences maximum.",
+            "- Do NOT use any emojis.",
+            "- Do NOT use generic pickup lines.",
+            "- Be original — every message should feel different.",
+            "- Return ONLY the message text, nothing else.",
+          ].join(" "),
+        },
+        {
+          role: "user",
+          content:
+            "Generate a single unique opening message to send to someone on Instagram.",
+        },
+      ],
+      max_tokens: 120,
+      temperature: 1.0,
+    }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Azure API ${resp.status}: ${body}`);
+  }
+
+  const json = await resp.json();
+  const text = json.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error("Empty response from Azure API");
+  return text;
 }
 
 // ── Helpers ──

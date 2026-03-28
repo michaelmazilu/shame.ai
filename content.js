@@ -13,7 +13,8 @@
   // ── State ──
   let settings = {
     enabled: true,
-    dmTemplate: "Hey! I came across your profile and had to say hi 👋",
+    dmTemplate:
+      "Hey — I came across your profile and wanted to say hello.",
     maxDMsPerHour: 10,
     sources: { suggested: true, explore: true, friendsOfFriends: true },
   };
@@ -145,10 +146,10 @@
 
   // ── Swipe callbacks ──
 
-  async function onSwipeRight(profile) {
-    console.log(`[ShotTaker] Shot fired at @${profile.username}!`);
+  async function onSwipeRight(profile, customMessage) {
+    const messageText = customMessage || settings.dmTemplate;
+    console.log(`[ShotTaker] Sending to @${profile.username}`);
 
-    // Check DM rate limit
     if (dmsSentThisHour >= settings.maxDMsPerHour) {
       SwipeUI.showStatus(
         `Rate limit: ${settings.maxDMsPerHour} DMs/hour reached`,
@@ -157,28 +158,25 @@
       return;
     }
 
-    // Mark as seen
     seenProfiles.add(profile.id);
     saveSeenProfiles();
 
     try {
-      // Check if they follow us
-      SwipeUI.showStatus("Checking relationship...", "info");
+      SwipeUI.showStatus("Checking relationship…", "info");
       const relationship = await InstagramAPI.checkRelationship(profile.id);
 
       if (relationship.followedBy) {
-        // They follow us — send DM immediately
-        SwipeUI.showStatus("Sending your shot...", "info");
+        SwipeUI.showStatus("Sending message…", "info");
 
         const result = await InstagramAPI.sendDMGraphQL(
           profile.id,
-          settings.dmTemplate,
+          messageText,
         );
 
         if (result.success) {
           incrementDMCounter();
           SwipeUI.showStatus(
-            `Shot sent to @${profile.username}! 💘`,
+            `Message sent to @${profile.username}.`,
             "success",
           );
 
@@ -195,19 +193,17 @@
           SwipeUI.showStatus("Failed to send — try again later", "error");
         }
       } else {
-        // They don't follow us — follow them and queue for later DM
-        SwipeUI.showStatus(`Following @${profile.username}...`, "info");
+        SwipeUI.showStatus(`Following @${profile.username}…`, "info");
 
         const followResult = await InstagramAPI.followUser(profile.id);
 
         if (followResult.success) {
-          // Add to pending tracking in background
           chrome.runtime.sendMessage({
             type: "ST_ADD_PENDING",
             userId: profile.id,
             username: profile.username,
             fullName: profile.fullName,
-            dmTemplate: settings.dmTemplate,
+            dmTemplate: messageText,
           });
 
           SwipeUI.showStatus(
@@ -392,7 +388,7 @@
     // Load initial profiles
     await loadProfiles();
 
-    console.log("[ShotTaker] Initialized and ready 🎯");
+    console.log("[ShotTaker] Initialized");
   }
 
   // Only run on Instagram

@@ -22,8 +22,8 @@ const SwipeUI = (() => {
     container.id = "shottaker-container";
     container.innerHTML = `
       <div id="st-header">
-        <span id="st-logo">🎯 ShotTaker</span>
-        <button id="st-minimize">−</button>
+        <span id="st-logo">ShotTaker</span>
+        <button type="button" id="st-minimize" aria-label="Minimize panel">−</button>
       </div>
       <div id="st-card-area">
         <div id="st-empty-state">
@@ -32,8 +32,8 @@ const SwipeUI = (() => {
         </div>
       </div>
       <div id="st-actions">
-        <button id="st-pass" title="Pass">✕</button>
-        <button id="st-shoot" title="Shoot Your Shot">💘</button>
+        <button type="button" id="st-pass" class="st-action-btn" title="Pass">Pass</button>
+        <button type="button" id="st-shoot" class="st-action-btn st-action-primary" title="Send message">Shoot</button>
       </div>
       <div id="st-status"></div>
     `;
@@ -46,11 +46,13 @@ const SwipeUI = (() => {
     const actions = container.querySelector("#st-actions");
     let minimized = false;
 
+    minimizeBtn.setAttribute("aria-expanded", "true");
     minimizeBtn.addEventListener("click", () => {
       minimized = !minimized;
       cardArea.style.display = minimized ? "none" : "block";
       actions.style.display = minimized ? "none" : "flex";
       minimizeBtn.textContent = minimized ? "+" : "−";
+      minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
     });
 
     // Button actions
@@ -119,7 +121,7 @@ const SwipeUI = (() => {
     const uniqueLocations = [...new Set(locations)].slice(0, 2);
     const locationHtml =
       uniqueLocations.length > 0
-        ? `<p class="st-card-location">📍 ${uniqueLocations.join(", ")}</p>`
+        ? `<p class="st-card-location"><span class="st-loc-label">Location</span> ${uniqueLocations.join(", ")}</p>`
         : "";
 
     // Engagement info
@@ -129,7 +131,7 @@ const SwipeUI = (() => {
 
     // Badges line (verified, pronouns, category)
     const badges = [];
-    if (profile.isVerified) badges.push("✓ Verified");
+    if (profile.isVerified) badges.push("Verified");
     if (profile.pronouns?.length) badges.push(profile.pronouns.join("/"));
     if (profile.categoryName) badges.push(profile.categoryName);
     const badgeHtml =
@@ -151,8 +153,8 @@ const SwipeUI = (() => {
 
     card.innerHTML = `
       <div class="st-card-image" style="background-image: url('${profile.profilePic}')">
-        <div class="st-swipe-label st-label-like">SHOOT 💘</div>
-        <div class="st-swipe-label st-label-pass">PASS ✕</div>
+        <div class="st-swipe-label st-label-like">Shoot</div>
+        <div class="st-swipe-label st-label-pass">Pass</div>
       </div>
       <div class="st-card-info">
         <h3 class="st-card-name">${profile.fullName || profile.username}</h3>
@@ -250,13 +252,128 @@ const SwipeUI = (() => {
     currentCard.style.opacity = "0";
 
     setTimeout(() => {
-      if (direction === "right" && onSwipeRight) {
-        onSwipeRight(profile);
-      } else if (direction === "left" && onSwipeLeft) {
+      if (direction === "left" && onSwipeLeft) {
         onSwipeLeft(profile);
+        showNextCard();
+      } else if (direction === "right") {
+        showNextCard();
+        openMessageModal(profile);
       }
-      showNextCard();
     }, 400);
+  }
+
+  // ── Message modal (generate → edit → send) ──
+
+  let modalEl = null;
+
+  function openMessageModal(profile) {
+    if (modalEl) modalEl.remove();
+
+    modalEl = document.createElement("div");
+    modalEl.id = "st-msg-modal";
+    modalEl.innerHTML = `
+      <div class="st-modal-backdrop"></div>
+      <div class="st-modal-panel">
+        <div class="st-modal-header">
+          <span class="st-modal-title">Message for @${profile.username}</span>
+          <button type="button" class="st-modal-close" aria-label="Cancel">Cancel</button>
+        </div>
+        <div class="st-modal-body">
+          <div class="st-modal-loading">
+            <div id="st-modal-spinner"></div>
+            <span>Generating message…</span>
+          </div>
+          <textarea class="st-modal-textarea" style="display:none" rows="3"></textarea>
+          <div class="st-modal-error" style="display:none"></div>
+        </div>
+        <div class="st-modal-actions" style="display:none">
+          <button type="button" class="st-modal-btn st-modal-reroll">Reroll</button>
+          <button type="button" class="st-modal-btn st-modal-send">Send</button>
+        </div>
+        <div class="st-modal-fallback" style="display:none">
+          <button type="button" class="st-modal-btn st-modal-retry">Retry</button>
+          <button type="button" class="st-modal-btn st-modal-use-template">Use fallback template</button>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(modalEl);
+
+    const backdrop = modalEl.querySelector(".st-modal-backdrop");
+    const closeBtn = modalEl.querySelector(".st-modal-close");
+    const loadingEl = modalEl.querySelector(".st-modal-loading");
+    const textareaEl = modalEl.querySelector(".st-modal-textarea");
+    const errorEl = modalEl.querySelector(".st-modal-error");
+    const actionsEl = modalEl.querySelector(".st-modal-actions");
+    const fallbackEl = modalEl.querySelector(".st-modal-fallback");
+    const rerollBtn = modalEl.querySelector(".st-modal-reroll");
+    const sendBtn = modalEl.querySelector(".st-modal-send");
+    const retryBtn = modalEl.querySelector(".st-modal-retry");
+    const templateBtn = modalEl.querySelector(".st-modal-use-template");
+
+    function dismiss() {
+      if (modalEl) { modalEl.remove(); modalEl = null; }
+    }
+
+    function showLoading() {
+      loadingEl.style.display = "flex";
+      textareaEl.style.display = "none";
+      errorEl.style.display = "none";
+      actionsEl.style.display = "none";
+      fallbackEl.style.display = "none";
+    }
+
+    function showResult(text) {
+      loadingEl.style.display = "none";
+      textareaEl.style.display = "block";
+      textareaEl.value = text;
+      actionsEl.style.display = "flex";
+      errorEl.style.display = "none";
+      fallbackEl.style.display = "none";
+      textareaEl.focus();
+    }
+
+    function showError(msg) {
+      loadingEl.style.display = "none";
+      textareaEl.style.display = "none";
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+      actionsEl.style.display = "none";
+      fallbackEl.style.display = "flex";
+    }
+
+    function requestGenerate() {
+      showLoading();
+      chrome.runtime.sendMessage({ type: "ST_GENERATE_MESSAGE" }, (resp) => {
+        if (resp?.ok) {
+          showResult(resp.message);
+        } else {
+          showError("Could not generate message. Check your network and try again.");
+        }
+      });
+    }
+
+    backdrop.addEventListener("click", dismiss);
+    closeBtn.addEventListener("click", dismiss);
+    rerollBtn.addEventListener("click", requestGenerate);
+    retryBtn.addEventListener("click", requestGenerate);
+
+    sendBtn.addEventListener("click", () => {
+      const message = textareaEl.value.trim();
+      dismiss();
+      if (message && onSwipeRight) {
+        onSwipeRight(profile, message);
+      }
+    });
+
+    templateBtn.addEventListener("click", () => {
+      dismiss();
+      if (onSwipeRight) {
+        onSwipeRight(profile, null);
+      }
+    });
+
+    requestGenerate();
   }
 
   function showStatus(message, type = "info", duration = 3000) {
@@ -271,7 +388,7 @@ const SwipeUI = (() => {
 
   function updateCounter() {
     const header = container.querySelector("#st-logo");
-    header.textContent = `🎯 ShotTaker (${cardStack.length + (currentCard ? 1 : 0)})`;
+    header.textContent = `ShotTaker · ${cardStack.length + (currentCard ? 1 : 0)}`;
   }
 
   function truncate(str, max) {
@@ -288,7 +405,7 @@ const SwipeUI = (() => {
   function createToggleButton() {
     const btn = document.createElement("div");
     btn.id = "st-toggle-btn";
-    btn.innerHTML = "🎯";
+    btn.innerHTML = '<span class="st-toggle-monogram">ST</span>';
     btn.title = "Toggle ShotTaker";
     btn.addEventListener("click", () => {
       if (!container) return;
@@ -305,5 +422,6 @@ const SwipeUI = (() => {
     showStatus,
     createToggleButton,
     updateCounter,
+    openMessageModal,
   };
 })();
