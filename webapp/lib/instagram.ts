@@ -5,15 +5,27 @@ const APP_ID = "936619743392459";
 const BASE = "https://www.instagram.com";
 
 const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
 
 function buildHeaders(session: IGSession): Record<string, string> {
   return {
+    accept: "*/*",
+    "accept-language": "en-US,en;q=0.9",
+    "sec-ch-prefers-color-scheme": "dark",
+    "sec-ch-ua": '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
+    "sec-ch-ua-full-version-list": '"Chromium";v="146.0.7680.155", "Not-A.Brand";v="24.0.0.0", "Google Chrome";v="146.0.7680.155"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-model": '""',
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-ch-ua-platform-version": '"15.7.3"',
+    "user-agent": USER_AGENT,
+    "x-asbd-id": "359341",
     "x-ig-app-id": APP_ID,
+    "x-ig-www-claim": "",
+    "x-instagram-ajax": "1036193752",
     "x-requested-with": "XMLHttpRequest",
     "x-csrftoken": session.csrfToken,
     cookie: session.cookies,
-    "user-agent": USER_AGENT,
     referer: "https://www.instagram.com/",
     origin: "https://www.instagram.com",
     "sec-fetch-dest": "empty",
@@ -763,6 +775,17 @@ export async function loadProfilesFast(
     }
   }
 
+  // Tier 3: Explore — single API call, no enrichment
+  if (sources.explore) {
+    try {
+      const explore = await getExploreProfiles(session);
+      const tier3 = filterAndDedupe(explore, seen, session.userId);
+      allProfiles.push(...tier3);
+    } catch (e) {
+      console.warn("[Profiles] Tier 3 (explore) failed:", e);
+    }
+  }
+
   return allProfiles;
 }
 
@@ -778,4 +801,231 @@ export async function enrichSingleProfile(
     full.recentPosts = [];
   }
   return full;
+}
+
+// ── Comments ──
+
+export async function commentOnPost(session: IGSession, mediaId: string, text: string) {
+  const url = `${BASE}/api/v1/web/comments/${mediaId}/add/`;
+  const body = new URLSearchParams({ comment_text: text });
+
+  const resp = await igFetch(url, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await resp.json();
+  return { success: resp.ok, data };
+}
+
+// ── Media ID Resolution ──
+
+export async function getMediaId(session: IGSession, shortcode: string): Promise<string | null> {
+  const url = `${BASE}/api/v1/media/${shortcode}/media_id/`;
+  try {
+    const resp = await igFetch(url, session);
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.media_id || null;
+    }
+  } catch { /* fall through */ }
+
+  // Fallback to /info/ endpoint
+  try {
+    const infoUrl = `${BASE}/api/v1/media/${shortcode}/info/`;
+    const resp = await igFetch(infoUrl, session);
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.items?.[0]?.pk ? String(data.items[0].pk) : null;
+    }
+  } catch { /* empty */ }
+
+  return null;
+}
+
+// ── Bulk Relationship Check ──
+
+export async function checkRelationshipBulk(
+  session: IGSession,
+  userIds: string[],
+): Promise<Record<string, { followedBy: boolean; following: boolean; outgoingRequest: boolean }>> {
+  const url = `${BASE}/api/v1/friendships/show_many/`;
+  const body = new URLSearchParams({ user_ids: userIds.join(",") });
+
+  const resp = await igFetch(url, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await resp.json();
+  const statuses = data.friendship_statuses || {};
+  const result: Record<string, { followedBy: boolean; following: boolean; outgoingRequest: boolean }> = {};
+
+  for (const [id, status] of Object.entries(statuses)) {
+    const s = status as Record<string, boolean>;
+    result[id] = {
+      followedBy: !!s.followed_by,
+      following: !!s.following,
+      outgoingRequest: !!s.outgoing_request,
+    };
+  }
+
+  return result;
+}
+
+// ── Photo Upload + Post ──
+
+export async function uploadPhoto(
+  session: IGSession,
+  jpegData: ArrayBuffer,
+): Promise<{ success: boolean; uploadId?: string; error?: string }> {
+  const uploadId = String(Math.floor(Date.now() / 1000));
+  const entityName = `${uploadId}_0_${Math.floor(Math.random() * 9e9) + 1e9}`;
+
+  const ruploadParams = JSON.stringify({
+    retry_context: JSON.stringify({
+      num_step_auto_retry: 0,
+      num_reupload: 0,
+      num_step_manual_retry: 0,
+    }),
+    media_type: 1,
+    upload_id: uploadId,
+    image_compression: JSON.stringify({
+      lib_name: "moz",
+      lib_version: "3.1.m",
+      quality: "80",
+    }),
+    xsharing_user_ids: "[]",
+  });
+
+  const headers = {
+    ...buildHeaders(session),
+    "x-instagram-rupload-params": ruploadParams,
+    "x-entity-name": entityName,
+    "x-entity-length": String(jpegData.byteLength),
+    "x-entity-type": "image/jpeg",
+    "content-type": "image/jpeg",
+    offset: "0",
+    "sec-fetch-site": "same-site",
+  };
+
+  const resp = await fetch(`https://i.instagram.com/rupload_igphoto/${entityName}`, {
+    method: "POST",
+    headers,
+    body: jpegData,
+  });
+
+  if (!resp.ok) {
+    return { success: false, error: `Upload failed: ${resp.status}` };
+  }
+
+  return { success: true, uploadId };
+}
+
+export async function publishPost(
+  session: IGSession,
+  uploadId: string,
+  caption: string,
+): Promise<{ success: boolean; mediaId?: string; code?: string; error?: string }> {
+  const url = `${BASE}/api/v1/media/configure/`;
+  const body = new URLSearchParams({
+    upload_id: uploadId,
+    caption,
+    source_type: "4",
+  });
+
+  const resp = await igFetch(url, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    return { success: false, error: `Configure failed: ${resp.status}` };
+  }
+
+  return {
+    success: true,
+    mediaId: data.media?.id,
+    code: data.media?.code,
+  };
+}
+
+// ── Profile Edit ──
+
+export async function getProfileFormData(
+  session: IGSession,
+): Promise<Record<string, string> | null> {
+  const url = `${BASE}/api/v1/accounts/edit/web_form_data/`;
+  const resp = await igFetch(url, session);
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.form_data || null;
+}
+
+export async function editProfile(
+  session: IGSession,
+  fields: Record<string, string>,
+): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+  // Fetch current values first so we don't blank out fields
+  const current = await getProfileFormData(session);
+
+  const payload: Record<string, string> = current
+    ? {
+        biography: current.biography || "",
+        chaining_enabled: "on",
+        external_url: current.external_url || "",
+        first_name: current.first_name || "",
+        username: current.username || "",
+        ...(current.email ? { email: current.email } : {}),
+        ...(current.phone_number ? { phone_number: current.phone_number } : {}),
+      }
+    : {};
+
+  Object.assign(payload, fields);
+
+  const url = `${BASE}/api/v1/web/accounts/edit/`;
+  const body = new URLSearchParams(payload);
+
+  const resp = await igFetch(url, session, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = await resp.json();
+  return { success: resp.ok, data };
+}
+
+// ── Profile Picture ──
+
+export async function changeProfilePicture(
+  session: IGSession,
+  imageData: ArrayBuffer,
+  filename = "profile_pic.jpg",
+): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+  const url = `${BASE}/api/v1/web/accounts/web_change_profile_picture/`;
+
+  const formData = new FormData();
+  formData.append("profile_pic", new Blob([imageData], { type: "image/jpeg" }), filename);
+
+  // Strip content-type so fetch sets the multipart boundary automatically
+  const headers = buildHeaders(session);
+  delete headers["content-type"];
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!resp.ok) {
+    return { success: false, error: `Profile pic change failed: ${resp.status}` };
+  }
+
+  const data = await resp.json();
+  return { success: true, data };
 }
