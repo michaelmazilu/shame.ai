@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMpServerEnv } from "@/lib/mp-server-env";
 
+export const runtime = "nodejs";
+
 const ALLOWED = new Set([
   "create-room",
   "join-room",

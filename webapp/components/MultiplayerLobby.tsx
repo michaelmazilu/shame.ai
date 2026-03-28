@@ -348,48 +348,25 @@ export default function MultiplayerLobby({ igUsername }: Props) {
   if (!serverLive) {
     const hu = mpEnv?.hasUrl === true;
     const hk = mpEnv?.hasKey === true;
-    let detail =
-      "Add both variables so the room can sync via Supabase Edge Functions.";
-    if (hu && !hk) {
-      detail =
-        "Your Supabase URL is set, but SUPABASE_PUBLISHABLE_KEY is empty, still a placeholder, or not saved to disk. In Supabase: Project Settings → API → copy the publishable key (or legacy anon JWT as SUPABASE_ANON_KEY). Save repo root .env.local, then restart npm run dev.";
-    } else if (!hu && hk) {
-      detail =
-        "An API key is set, but SUPABASE_URL is missing or invalid. It should look like https://YOUR_REF.supabase.co";
-    } else if (!hu && !hk) {
-      detail =
-        "Put SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repo root .env.local (or webapp/.env.local). See webapp/.env.example.";
-    }
-
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <p className="text-zinc-600 text-sm font-medium">
           Multiplayer server not configured
         </p>
         <p className="text-zinc-500 text-xs leading-relaxed">
-          You&apos;re signed in as <IgAccountInline handle={igUsername} />.
+          Signed in as <IgAccountInline handle={igUsername} />.
         </p>
         {mpEnv ? (
-          <p className="text-xs text-zinc-600 font-medium">
-            Env check: project URL {hu ? "OK" : "missing"} · API key{" "}
-            {hk ? "OK" : "missing"}
+          <p className="text-xs text-zinc-500">
+            URL {hu ? "ok" : "missing"} · key {hk ? "ok" : "missing"}
           </p>
         ) : null}
-        <p className="text-zinc-500 text-xs leading-relaxed text-left max-w-md mx-auto">
-          {detail}
-        </p>
-        <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
-          {`# Example — replace with real values from Supabase → Settings → API
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-# Or legacy JWT: SUPABASE_ANON_KEY=eyJ...`}
-        </pre>
-        <p className="text-xs text-zinc-400">
-          Repo root <code className="text-[10px]">.env.local</code> is merged
-          into the server after Next loads env (empty lines in{" "}
-          <code className="text-[10px]">webapp/.env.local</code> won&apos;t
-          wipe parent keys). Save the file to disk; restart dev if the server
-          was already running when you edited env.
+        <p className="text-zinc-500 text-xs leading-relaxed max-w-sm mx-auto">
+          Put <code className="text-[10px]">SUPABASE_URL</code> and{" "}
+          <code className="text-[10px]">SUPABASE_PUBLISHABLE_KEY</code> in repo
+          root <code className="text-[10px]">.env.local</code> (or uncomment them
+          in <code className="text-[10px]">webapp/.env.local</code>), save, then
+          restart <code className="text-[10px]">npm run dev</code>.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
           ← Back home

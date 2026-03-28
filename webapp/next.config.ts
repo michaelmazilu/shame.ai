@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
-import { mergeParentEnvLocalIntoProcess } from "./lib/merge-parent-env-local";
-
-/** Best-effort before Next loads `webapp/.env.local`; `instrumentation.ts` merges again after. */
-mergeParentEnvLocalIntoProcess();
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: path.resolve(process.cwd(), ".."),
+  },
 };
 
 export default nextConfig;

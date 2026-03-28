@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { launchInstagramLogin } from "@/lib/browser-auth";
 import { hydrateInstagramUsername } from "@/lib/instagram";
 import { getSession } from "@/lib/session";
+import type { IGSession } from "@/lib/types";
 
 export const maxDuration = 300; // allow up to 5 minutes
 
@@ -27,7 +28,7 @@ async function loginViaPlaywrightServer(username: string, password: string) {
   }
   return data as {
     success: boolean;
-    session: Record<string, unknown>;
+    session?: IGSession;
   };
 }
 

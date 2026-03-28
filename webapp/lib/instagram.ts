@@ -216,7 +216,9 @@ export async function getSuggestedUsers(
     return [];
   }
 
-  const groups = (data?.groups || []) as Array<{ items?: Array<{ user?: Record<string, any>; social_context?: unknown }> }>;
+  const groups: Array<{
+    items?: Array<{ user?: Record<string, unknown>; social_context?: unknown }>;
+  }> = Array.isArray(data?.groups) ? data.groups : [];
   const users: IGProfile[] = [];
 
   for (const group of groups) {
@@ -224,11 +226,11 @@ export async function getSuggestedUsers(
       const u = item.user;
       if (u) {
         users.push({
-          id: String(u.pk || u.pk_id),
-          username: u.username,
-          fullName: u.full_name,
-          profilePic: u.profile_pic_url,
-          isPrivate: u.is_private,
+          id: String(u.pk ?? u.pk_id ?? ""),
+          username: String(u.username ?? ""),
+          fullName: String(u.full_name ?? ""),
+          profilePic: String(u.profile_pic_url ?? ""),
+          isPrivate: Boolean(u.is_private),
           mutualFollowers: item.social_context ? 1 : 0,
         });
       }

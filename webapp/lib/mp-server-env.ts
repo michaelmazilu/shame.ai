@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { mergeParentEnvLocalIntoProcess } from "./merge-parent-env-local";
+import { resolveRepoAndWebappDirs } from "./repo-paths";
 
 /**
  * Env for `/api/mp/*` proxy. Merges `process.env` with on-disk `.env.local`
@@ -27,9 +28,10 @@ function isPlaceholderSupabaseUrl(url: string): boolean {
 
 function isPlaceholderSupabaseKey(key: string): boolean {
   const k = key.trim();
-  if (k.length < 20) return true;
-  if (/your[_\s-]*key/i.test(k)) return true;
-  if (k.includes("...")) return true;
+  if (k.length < 8) return true;
+  const lower = k.toLowerCase();
+  if (lower.includes("your_key_here") || lower === "changeme" || lower === "xxx")
+    return true;
   return false;
 }
 
@@ -64,6 +66,7 @@ function firstValidKey(...candidates: (string | undefined)[]): string {
 
 function parseDotEnvFile(raw: string): Record<string, string> {
   const out: Record<string, string> = {};
+  raw = raw.replace(/^\uFEFF/, "");
   for (let line of raw.split(/\r?\n/)) {
     line = line.trim();
     if (!line || line.startsWith("#")) continue;
@@ -93,46 +96,52 @@ function readEnvLocalAt(filePath: string): Record<string, string> {
   }
 }
 
-function readWebappEnvLocal(): Record<string, string> {
-  return readEnvLocalAt(path.resolve(process.cwd(), ".env.local"));
-}
-
-function readParentEnvLocal(): Record<string, string> {
-  return readEnvLocalAt(path.resolve(process.cwd(), "..", ".env.local"));
+function readRepoAndWebappEnvLocal(): {
+  repoRoot: Record<string, string>;
+  webapp: Record<string, string>;
+} {
+  const { repoRoot, webappDir } = resolveRepoAndWebappDirs();
+  return {
+    repoRoot: readEnvLocalAt(path.join(repoRoot, ".env.local")),
+    webapp: readEnvLocalAt(path.join(webappDir, ".env.local")),
+  };
 }
 
 export function getMpServerEnv(): { url: string; key: string } {
   // Re-run every call: Next may load `webapp/.env.local` with empty `KEY=`
   // after a one-time merge, which would leave process.env stuck empty.
   mergeParentEnvLocalIntoProcess();
-  const web = readWebappEnvLocal();
-  const parent = readParentEnvLocal();
+  const { repoRoot, webapp } = readRepoAndWebappEnvLocal();
 
+  // Repo root first (where people put SUPABASE_*), then webapp, then process.env.
   const url = firstValidUrl(
+    repoRoot.SUPABASE_URL,
+    repoRoot.NEXT_PUBLIC_SUPABASE_URL,
+    webapp.SUPABASE_URL,
+    webapp.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    web.SUPABASE_URL,
-    web.NEXT_PUBLIC_SUPABASE_URL,
-    parent.SUPABASE_URL,
-    parent.NEXT_PUBLIC_SUPABASE_URL,
   );
 
   const key = firstValidKey(
+    repoRoot.SUPABASE_PUBLISHABLE_KEY,
+    repoRoot.SUPABASE_ANON_KEY,
+    repoRoot.SUPABASE_SERVICE_ROLE_KEY,
+    repoRoot.KEY,
+    repoRoot.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    repoRoot.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    webapp.SUPABASE_PUBLISHABLE_KEY,
+    webapp.SUPABASE_ANON_KEY,
+    webapp.SUPABASE_SERVICE_ROLE_KEY,
+    webapp.KEY,
+    webapp.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    webapp.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     process.env.SUPABASE_PUBLISHABLE_KEY,
     process.env.SUPABASE_ANON_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
     process.env.KEY,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    web.SUPABASE_PUBLISHABLE_KEY,
-    web.SUPABASE_ANON_KEY,
-    web.KEY,
-    web.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    web.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    parent.SUPABASE_PUBLISHABLE_KEY,
-    parent.SUPABASE_ANON_KEY,
-    parent.KEY,
-    parent.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    parent.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
   return { url, key };

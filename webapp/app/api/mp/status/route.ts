@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getMpServerEnv } from "@/lib/mp-server-env";
 
+export const runtime = "nodejs";
+
 /** GET — multiplayer proxy env (no secret values; booleans only). */
 export async function GET() {
   const { url, key } = getMpServerEnv();

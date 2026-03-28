@@ -1,0 +1,12 @@
+{
+  "name": "shame-ai",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm install --prefix webapp",
+    "prepare": "node scripts/ensure-env.js",
+    "dev": "node scripts/free-port-3000.js && node scripts/ensure-env.js && npm run dev --prefix webapp",
+    "build": "npm run build --prefix webapp",
+    "start": "npm run start --prefix webapp",
+    "lint": "npm run lint --prefix webapp"
+  }
+}

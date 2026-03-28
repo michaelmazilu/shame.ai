@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { resolveRepoAndWebappDirs } from "./repo-paths";
 
 /**
  * Fills `process.env` from repo root `.env.local` when a key is missing or
@@ -8,9 +9,11 @@ import path from "node:path";
  * `instrumentation.ts` (runs after Next’s dotenv) so repo-root secrets win.
  */
 export function mergeParentEnvLocalIntoProcess(): void {
-  const file = path.resolve(process.cwd(), "..", ".env.local");
+  const { repoRoot } = resolveRepoAndWebappDirs();
+  const file = path.join(repoRoot, ".env.local");
   if (!existsSync(file)) return;
-  const raw = readFileSync(file, "utf8");
+  let raw = readFileSync(file, "utf8");
+  raw = raw.replace(/^\uFEFF/, "");
   for (let line of raw.split(/\r?\n/)) {
     line = line.trim();
     if (!line || line.startsWith("#")) continue;
