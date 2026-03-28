@@ -12,7 +12,7 @@ import {
   CATEGORY_LABELS,
   type PunishmentCategory,
 } from "@/lib/punishments";
-import { mpFetch, getMultiplayerServerReady } from "@/lib/multiplayer-api";
+import { mpFetch, fetchMultiplayerEnvStatus } from "@/lib/multiplayer-api";
 import type { RoomState } from "@/lib/multiplayer-types";
 import {
   loadSession,
@@ -46,6 +46,10 @@ type Props = {
 
 export default function MultiplayerLobby({ igUsername }: Props) {
   const [serverLive, setServerLive] = useState<boolean | null>(null);
+  const [mpEnv, setMpEnv] = useState<{
+    hasUrl: boolean;
+    hasKey: boolean;
+  } | null>(null);
   const [session, setSession] = useState<MpSession | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [err, setErr] = useState("");
@@ -62,10 +66,11 @@ export default function MultiplayerLobby({ igUsername }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const ok = await getMultiplayerServerReady();
+      const st = await fetchMultiplayerEnvStatus();
       if (cancelled) return;
-      setServerLive(ok);
-      if (ok) setSession(loadSession());
+      setMpEnv({ hasUrl: st.hasUrl, hasKey: st.hasKey });
+      setServerLive(st.ok);
+      if (st.ok) setSession(loadSession());
     })();
     return () => {
       cancelled = true;
@@ -341,24 +346,49 @@ export default function MultiplayerLobby({ igUsername }: Props) {
   }
 
   if (!serverLive) {
+    const hu = mpEnv?.hasUrl === true;
+    const hk = mpEnv?.hasKey === true;
+    let detail =
+      "Add both variables so the room can sync via Supabase Edge Functions.";
+    if (hu && !hk) {
+      detail =
+        "Your Supabase URL is set, but SUPABASE_PUBLISHABLE_KEY is empty, still a placeholder, or not saved to disk. In Supabase: Project Settings → API → copy the publishable key (or legacy anon JWT as SUPABASE_ANON_KEY). Save repo root .env.local, then restart npm run dev.";
+    } else if (!hu && hk) {
+      detail =
+        "An API key is set, but SUPABASE_URL is missing or invalid. It should look like https://YOUR_REF.supabase.co";
+    } else if (!hu && !hk) {
+      detail =
+        "Put SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in repo root .env.local (or webapp/.env.local). See webapp/.env.example.";
+    }
+
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <p className="text-zinc-600 text-sm font-medium">
           Multiplayer server not configured
         </p>
         <p className="text-zinc-500 text-xs leading-relaxed">
-          Add Supabase keys so the room can sync (Edge Functions). You&apos;re
-          signed in as <IgAccountInline handle={igUsername} />.
+          You&apos;re signed in as <IgAccountInline handle={igUsername} />.
+        </p>
+        {mpEnv ? (
+          <p className="text-xs text-zinc-600 font-medium">
+            Env check: project URL {hu ? "OK" : "missing"} · API key{" "}
+            {hk ? "OK" : "missing"}
+          </p>
+        ) : null}
+        <p className="text-zinc-500 text-xs leading-relaxed text-left max-w-md mx-auto">
+          {detail}
         </p>
         <pre className="text-left text-xs bg-zinc-900 text-zinc-100 p-4 rounded-xl overflow-x-auto">
-          {`SUPABASE_URL=
-SUPABASE_PUBLISHABLE_KEY=`}
+          {`# Example — replace with real values from Supabase → Settings → API
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+# Or legacy JWT: SUPABASE_ANON_KEY=eyJ...`}
         </pre>
         <p className="text-xs text-zinc-400">
-          Repo root <code className="text-[10px]">.env.local</code> is loaded
+          Repo root <code className="text-[10px]">.env.local</code> is merged
           when you run dev from <code className="text-[10px]">webapp/</code>.
-          See <code className="text-[10px]">webapp/.env.example</code>. Restart{" "}
-          <code className="text-[10px]">npm run dev</code>.
+          Unsaved editor buffers are not read — save the file. Restart{" "}
+          <code className="text-[10px]">npm run dev</code> after changes.
         </p>
         <Link href="/" className="text-rose text-sm font-medium inline-block">
           ← Back home

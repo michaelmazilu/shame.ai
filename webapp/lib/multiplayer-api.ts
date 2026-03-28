@@ -3,15 +3,34 @@
  * Supabase URL + publishable key live server-side only (`SUPABASE_*` in .env.local).
  */
 
-export async function getMultiplayerServerReady(): Promise<boolean> {
+export type MultiplayerEnvStatus = {
+  ok: boolean;
+  hasUrl: boolean;
+  hasKey: boolean;
+};
+
+/** Resolves env used by `/api/mp/*` (503 body still includes hasUrl/hasKey). */
+export async function fetchMultiplayerEnvStatus(): Promise<MultiplayerEnvStatus> {
   try {
     const res = await fetch("/api/mp/status", { cache: "no-store" });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { ok?: boolean };
-    return data.ok === true;
+    const data = (await res.json()) as {
+      ok?: boolean;
+      hasUrl?: boolean;
+      hasKey?: boolean;
+    };
+    return {
+      ok: data.ok === true,
+      hasUrl: data.hasUrl === true,
+      hasKey: data.hasKey === true,
+    };
   } catch {
-    return false;
+    return { ok: false, hasUrl: false, hasKey: false };
   }
+}
+
+export async function getMultiplayerServerReady(): Promise<boolean> {
+  const s = await fetchMultiplayerEnvStatus();
+  return s.ok;
 }
 
 export async function mpFetch<T = unknown>(

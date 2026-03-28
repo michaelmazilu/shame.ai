@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { getMpServerEnv } from "@/lib/mp-server-env";
 
-/** GET — tells the client whether multiplayer proxy env is set (no secrets returned). */
+/** GET — multiplayer proxy env (no secret values; booleans only). */
 export async function GET() {
   const { url, key } = getMpServerEnv();
-  if (!url || !key) {
-    return NextResponse.json({ ok: false }, { status: 503 });
+  const hasUrl = !!url;
+  const hasKey = !!key;
+  const ok = hasUrl && hasKey;
+  if (!ok) {
+    return NextResponse.json(
+      { ok: false, hasUrl, hasKey },
+      { status: 503 },
+    );
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, hasUrl, hasKey });
 }
