@@ -228,9 +228,6 @@ export default function LandingPage() {
             <Link href="#rituals" className="text-xs font-medium text-zinc-900 hover:text-rose transition-colors px-3 py-1.5 rounded-full hover:bg-rose/5">
               Features
             </Link>
-            <Link href="/login" className="text-xs font-medium text-zinc-900 hover:text-rose transition-colors px-3 py-1.5 rounded-full hover:bg-rose/5">
-              Log in
-            </Link>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-rose text-white rounded-full hover:bg-rose-dark transition-colors inline-block ml-1">
                 Get started
@@ -243,24 +240,16 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-14 pb-16 relative z-10">
         <div className="flex flex-col items-center text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-4xl sm:text-6xl lg:text-[4.5rem] font-extrabold tracking-tighter text-zinc-900 leading-[1.02] max-w-3xl"
-          >
-            The AI that{" "}
-            <motion.em
-              initial={{ opacity: 0, rotate: -3 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              transition={{ duration: 0.6, delay: 0.5, type: "spring", stiffness: 150, damping: 12 }}
-              className="font-cursive font-normal italic text-rose not-italic"
-              style={{ fontStyle: "italic" }}
+          <div className="overflow-hidden">
+            <motion.h1
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.15, type: "spring", stiffness: 80, damping: 16 }}
+              className="text-4xl sm:text-6xl lg:text-[4.5rem] font-extrabold tracking-tighter text-zinc-900 leading-[1.02] max-w-3xl"
             >
-              humiliates
-            </motion.em>{" "}
-            your friends
-          </motion.h1>
+              The AI that <em className="font-cursive font-normal italic text-rose">humiliates</em> your friends
+            </motion.h1>
+          </div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}

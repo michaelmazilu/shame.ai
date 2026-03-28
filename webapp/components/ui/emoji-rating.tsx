@@ -34,8 +34,7 @@ export function RatingInteraction({ onChange, className }: RatingInteractionProp
       <div className="flex items-center gap-3">
         {ratingData.map((item, i) => {
           const value = i + 1
-          const isActive = value <= displayRating
-          const isExact = value === displayRating
+          const isSelected = value === displayRating
 
           return (
             <button
@@ -49,16 +48,15 @@ export function RatingInteraction({ onChange, className }: RatingInteractionProp
               <div
                 className={cn(
                   "relative flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 ease-out",
-                  isActive ? "scale-110" : "scale-100 group-hover:scale-105",
+                  isSelected ? "scale-125" : "scale-100 group-hover:scale-110",
                 )}
               >
-                {/* Emoji with smooth grayscale transition */}
                 <span
                   className={cn(
                     "text-3xl transition-all duration-300 ease-out select-none",
-                    isActive
+                    isSelected
                       ? "grayscale-0 drop-shadow-lg"
-                      : "grayscale opacity-40 group-hover:opacity-70 group-hover:grayscale-[0.3]",
+                      : "grayscale opacity-30 group-hover:opacity-80 group-hover:grayscale-0",
                   )}
                 >
                   {item.emoji}
