@@ -4,7 +4,7 @@ This folder is **only** the Supabase project: config, SQL migrations, and **Edge
 
 **Full endpoint reference:** [API.md](./API.md)
 
-**Web UI:** Next.js lobby at [../webapp/app/room/page.tsx](../webapp/app/room/page.tsx) (`/room`) — set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `webapp/.env.local` (server-side; see [../webapp/README.md](../webapp/README.md)).
+**Web UI:** Next.js lobby at [../webapp/app/room/page.tsx](../webapp/app/room/page.tsx) (`/room`) — set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in repo root `.env.local` or `webapp/.env.local` (server-side; see [../webapp/README.md](../webapp/README.md)).
 
 **Shared Deno code** lives in [`_shared/`](./_shared/) (next to `functions/`), **not** inside `functions/`. If a folder sits under `functions/` with a name that doesn’t match `^[A-Za-z][A-Za-z0-9_-]*$` (e.g. `_shared`), `supabase functions deploy` fails with “Invalid Function name”.
 
@@ -92,7 +92,7 @@ Base URL:
 |----------|--------|---------|
 | `create-room` | POST | Create room + host player; returns `host_secret`, `player_token`, `invite_token`, `short_code` |
 | `join-room` | POST | Body: `invite_token` *or* `short_code` + optional profile fields; returns `player_token` |
-| `heartbeat` | POST | Body: `room_id`, `player_token` — marks player ready (within last 90s for rounds) |
+| `heartbeat` | POST | Body: `room_id`, `player_token` — marks player ready (within last 180s for rounds) |
 | `start-round` | POST | Body: `room_id`, `host_secret` — picks weighted random deed + random ready victim |
 | `room-state` | POST | Body: `room_id`, `player_token` — room, players, **latest_round**, **rounds** (last 50) |
 | `submit-result` | POST | Body: `room_id`, `player_token`, `round_id`, `result_status` (`ok` \| `skipped` \| `error`) |

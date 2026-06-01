@@ -20,6 +20,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ENV = ROOT / ".env.local"
 
+TARGETED_DEED_TYPES = {
+    "dm_random",
+    "follow_user",
+    "unfollow_user",
+    "love_declaration",
+    "fan_account",
+    "wrong_number",
+    "time_traveler",
+    "job_interview",
+    "conspiracy",
+    "breakup",
+    "life_advice",
+    "roommate",
+    "prophet",
+    "love_confession",
+    "send_reel",
+    "story_upload",
+    "ai_video_story",
+}
+
 
 def load_env() -> None:
     if not ENV.is_file():
@@ -107,7 +127,8 @@ def main() -> None:
     if st.get("error"):
         sys.exit(1)
     deed = (st.get("round") or {}).get("deed") or {}
-    assert deed.get("params", {}).get("target_username"), "expected enriched target_username"
+    if deed.get("type") in TARGETED_DEED_TYPES:
+        assert deed.get("params", {}).get("target_username"), "expected enriched target_username"
 
 
 if __name__ == "__main__":

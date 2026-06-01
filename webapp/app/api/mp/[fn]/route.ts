@@ -27,15 +27,27 @@ export async function POST(
     );
   }
   const body = await req.text();
-  const upstream = await fetch(`${url}/functions/v1/${fn}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      apikey: key,
-      "Content-Type": "application/json",
-    },
-    body: body || "{}",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${url}/functions/v1/${fn}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+        "Content-Type": "application/json",
+      },
+      body: body || "{}",
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "";
+    return NextResponse.json(
+      {
+        error: "upstream_unreachable",
+        detail: `Could not reach Supabase Edge Functions at the configured SUPABASE_URL. Check the project ref, DNS, and deployment.${message ? ` (${message})` : ""}`,
+      },
+      { status: 502 },
+    );
+  }
   const text = await upstream.text();
   const ct =
     upstream.headers.get("content-type")?.split(";")[0]?.trim() ||

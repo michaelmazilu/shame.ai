@@ -11,6 +11,26 @@ function cleanUsername(u: string): string {
   return u.trim().replace(/^@/, "");
 }
 
+const TARGET_REQUIRED_TYPES = new Set([
+  "dm_random",
+  "follow_user",
+  "unfollow_user",
+  "love_declaration",
+  "fan_account",
+  "wrong_number",
+  "time_traveler",
+  "job_interview",
+  "conspiracy",
+  "breakup",
+  "life_advice",
+  "roommate",
+  "prophet",
+  "love_confession",
+  "send_reel",
+  "story_upload",
+  "ai_video_story",
+]);
+
 async function resolveTargetUserId(
   targetUsername: string,
 ): Promise<{ userId: string } | { error: string }> {
@@ -40,6 +60,14 @@ export async function executeDeedOnInstagram(
   const p = deed.params || {};
   const targetUsername =
     typeof p.target_username === "string" ? p.target_username : "";
+
+  if (TARGET_REQUIRED_TYPES.has(t) && !targetUsername.trim()) {
+    return {
+      ok: false,
+      detail:
+        "This round is missing its Instagram target. Start a new round after updating the multiplayer server.",
+    };
+  }
 
   if (t === "dm_random") {
     const resolved = await resolveTargetUserId(targetUsername);
@@ -112,7 +140,7 @@ export async function executeDeedOnInstagram(
     const genRes = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ritualPrompt: prompt, targetUsername: victim }),
+      body: JSON.stringify({ ritualPrompt: prompt, username: victim }),
     });
     const genData = (await genRes.json()) as {
       message?: string;
@@ -147,16 +175,16 @@ export async function executeDeedOnInstagram(
 
   // ── Love confession (AI-generated) ──
   if (t === "love_confession") {
-    const resolved = targetUsername
-      ? await resolveTargetUserId(targetUsername)
-      : null;
+    const resolved = await resolveTargetUserId(targetUsername);
+    if ("error" in resolved) return { ok: false, detail: resolved.error };
+
     const genRes = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ritualPrompt:
           "Write a short, flirty love confession DM. 2 sentences max.",
-        targetUsername: targetUsername || "someone",
+        username: targetUsername || "someone",
       }),
     });
     const genData = (await genRes.json()) as {
@@ -165,19 +193,19 @@ export async function executeDeedOnInstagram(
     };
     if (!genRes.ok)
       return { ok: false, detail: genData.error || "Generation failed" };
-    if (resolved && !("error" in resolved)) {
-      const res = await fetch("/api/dm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: resolved.userId,
-          text: genData.message,
-        }),
-      });
-      const data = (await res.json()) as { success?: boolean; error?: string };
-      if (!res.ok || !data.success)
-        return { ok: false, detail: data.error || "DM failed" };
-    }
+
+    const res = await fetch("/api/dm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: resolved.userId,
+        text: genData.message,
+      }),
+    });
+    const data = (await res.json()) as { success?: boolean; error?: string };
+    if (!res.ok || !data.success)
+      return { ok: false, detail: data.error || "DM failed" };
+
     return {
       ok: true,
       detail: `Confession sent: "${(genData.message || "").slice(0, 60)}..."`,

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$(echo '== PROJECT CONTEXT =='; echo ''; echo '--- Git Branch ---'; git branch --show-current 2>/dev/null; echo ''; echo '--- Git Status ---'; git status --short 2>/dev/null; echo ''; echo '--- Recent Commits (last 5) ---'; git log --oneline -5 2>/dev/null; echo ''; echo '--- Recently Modified Files ---'; git diff --name-only HEAD~3 2>/dev/null | head -20)\"'\"}}'",
+            "timeout": 10,
+            "statusMessage": "Gathering project context..."
+          }
+        ]
+      }
+    ]
+  }
+}

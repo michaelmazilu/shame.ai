@@ -55,10 +55,12 @@ Marks the player as **ready** (seen within the last **180s** for `start-round`).
 
 Picks a **ready** player at random (victim) and a **weighted** deed from `deed_templates`.
 
-For **`dm_random`**, **`follow_user`**, **`unfollow_user`**, the server **merges** into `deed.params`:
+For target-based deeds, the server **merges** into `deed.params`:
 
 - `target_username`, `target_display_name` — a random **other** ready player who has `ig_username` set (web lobby sends this on create/join).
 - `dm_text` — for `dm_random`, defaults to a short line if the template omits it.
+
+Target-based deeds are `dm_random`, `follow_user`, `unfollow_user`, all DM ritual deed types, `love_confession`, `send_reel`, `story_upload`, and `ai_video_story`.
 
 If no other ready player has `ig_username`, returns **400** `no_other_player_with_ig`.
 

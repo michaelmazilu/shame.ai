@@ -2,6 +2,15 @@ import { corsHeaders, jsonRes } from "../../_shared/cors.ts";
 import { randomHex, randomShortCode, sha256Hex } from "../../_shared/crypto.ts";
 import { serviceClient } from "../../_shared/supabase.ts";
 
+function cleanText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function cleanIgUsername(value: unknown): string | null {
+  const text = cleanText(value);
+  return text ? text.replace(/^@/, "") : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -54,9 +63,9 @@ Deno.serve(async (req) => {
         room_id: room.id,
         player_token_hash,
         role: "host",
-        display_name: (body.display_name as string) ?? null,
-        ig_username: (body.ig_username as string) ?? null,
-        profile_pic_url: (body.profile_pic_url as string) ?? null,
+        display_name: cleanText(body.display_name),
+        ig_username: cleanIgUsername(body.ig_username),
+        profile_pic_url: cleanText(body.profile_pic_url),
         last_seen_at: new Date().toISOString(),
       })
       .select("id")

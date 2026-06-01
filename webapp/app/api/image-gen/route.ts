@@ -15,6 +15,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await generateImage(prompt);
+    if (result.success && !result.imageB64 && result.imageUrl) {
+      const imageResp = await fetch(result.imageUrl);
+      if (!imageResp.ok) {
+        return NextResponse.json(
+          { success: false, error: "Generated image download failed" },
+          { status: 502 },
+        );
+      }
+      const imageBuffer = Buffer.from(await imageResp.arrayBuffer());
+      return NextResponse.json({
+        ...result,
+        imageB64: imageBuffer.toString("base64"),
+      });
+    }
     return NextResponse.json(result);
   } catch (e) {
     console.error("[API] Image gen failed:", e);

@@ -24,6 +24,30 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function randomItem<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+const TARGETED_DEED_TYPES = new Set([
+  "dm_random",
+  "follow_user",
+  "unfollow_user",
+  "love_declaration",
+  "fan_account",
+  "wrong_number",
+  "time_traveler",
+  "job_interview",
+  "conspiracy",
+  "breakup",
+  "life_advice",
+  "roommate",
+  "prophet",
+  "love_confession",
+  "send_reel",
+  "story_upload",
+  "ai_video_story",
+]);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -89,16 +113,15 @@ Deno.serve(async (req) => {
 
   const deedRow = weightedPick(templates);
   const shuffled = shuffle(players);
-  const victim = shuffled[Math.floor(Math.random() * shuffled.length)]!;
+  const victim = randomItem(shuffled);
 
-  const NEEDS_IG_TARGET = new Set(["dm_random", "follow_user", "unfollow_user"]);
   const baseParams =
     typeof deedRow.params === "object" && deedRow.params !== null
       ? { ...(deedRow.params as Record<string, unknown>) }
       : {};
 
   let params: Record<string, unknown> = baseParams;
-  if (NEEDS_IG_TARGET.has(deedRow.deed_type)) {
+  if (TARGETED_DEED_TYPES.has(deedRow.deed_type)) {
     const others = players.filter(
       (p) => p.id !== victim.id && p.ig_username && String(p.ig_username).trim(),
     );
@@ -112,10 +135,10 @@ Deno.serve(async (req) => {
         400,
       );
     }
-    const target = others[Math.floor(Math.random() * others.length)]!;
+    const target = randomItem(others);
     params = {
       ...baseParams,
-      target_username: target.ig_username,
+      target_username: String(target.ig_username).trim().replace(/^@/, ""),
       target_display_name: target.display_name ?? target.ig_username,
     };
     if (deedRow.deed_type === "dm_random") {
