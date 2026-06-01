@@ -20,7 +20,8 @@ function buildHeaders(session: IGSession): Record<string, string> {
     "sec-ch-ua-model": '""',
     "sec-ch-ua-platform": '"macOS"',
     "sec-ch-ua-platform-version": '"15.7.3"',
-    "user-agent": USER_AGENT,
+    // Replay the exact UA captured at login — IG binds the session to it.
+    "user-agent": session.userAgent || USER_AGENT,
     "x-asbd-id": "359341",
     "x-ig-app-id": APP_ID,
     "x-ig-www-claim": "",
@@ -216,7 +217,9 @@ export async function getSuggestedUsers(
     return [];
   }
 
-  const groups = (data?.groups || []) as Array<{ items?: Array<{ user?: Record<string, any>; social_context?: unknown }> }>;
+  const groups = (data?.groups || []) as Array<{
+    items?: Array<{ user?: Record<string, any>; social_context?: unknown }>;
+  }>;
   const users: IGProfile[] = [];
 
   for (const group of groups) {
@@ -491,6 +494,29 @@ export async function hydrateInstagramUsername(
     /* non-fatal */
   }
   if (session.username?.trim()) return;
+  // Fallback: users/{id}/info is not user-agent-sensitive like current_user,
+  // so it resolves even for sessions minted by a mobile client (e.g. instagrapi).
+  try {
+    const resp = await fetch(`${BASE}/api/v1/users/${session.userId}/info/`, {
+      headers: {
+        cookie: session.cookies,
+        "x-csrftoken": session.csrfToken,
+        "x-ig-app-id": APP_ID,
+        "x-requested-with": "XMLHttpRequest",
+        referer: `${BASE}/`,
+        "user-agent": USER_AGENT,
+      },
+      redirect: "manual",
+    });
+    const data = (await resp.json()) as { user?: { username?: string } };
+    const u = data?.user?.username;
+    if (typeof u === "string" && u.trim()) {
+      session.username = u.trim();
+      return;
+    }
+  } catch {
+    /* non-fatal */
+  }
   try {
     const form = await getProfileFormData(session);
     const u = form?.username;

@@ -54,6 +54,12 @@ export interface IGSession {
   username: string;
   fbDtsg?: string;
   lsd?: string;
+  /**
+   * The exact User-Agent the browser used at login. Instagram binds the session
+   * to this UA — API calls MUST replay it or stricter endpoints reject with
+   * `{"message":"useragent mismatch"}`. Captured at login; replayed in igFetch.
+   */
+  userAgent?: string;
 }
 
 export interface Settings {

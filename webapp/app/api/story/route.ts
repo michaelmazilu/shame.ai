@@ -5,6 +5,7 @@ import {
   uploadStoryVideo,
   repostReelToStory,
 } from "@/lib/instagram";
+import { deedImageBuffer } from "@/lib/deed-image";
 
 export async function POST(req: NextRequest) {
   const igSession = await getIGSession();
@@ -18,16 +19,23 @@ export async function POST(req: NextRequest) {
   try {
     switch (action) {
       case "photo": {
-        // Upload base64 image as story
-        const { imageB64 } = body;
-        if (!imageB64) {
+        // Either an explicit base64 image, or a prompt to generate one.
+        const { imageB64, genPrompt } = body;
+        let buffer: ArrayBuffer;
+        if (imageB64) {
+          buffer = Uint8Array.from(atob(imageB64), (c) =>
+            c.charCodeAt(0),
+          ).buffer;
+        } else if (typeof genPrompt === "string" && genPrompt.trim()) {
+          // Deed path: always use the fixed deed image (not AI generation).
+          buffer = deedImageBuffer();
+        } else {
           return NextResponse.json(
-            { error: "imageB64 required" },
+            { error: "imageB64 or genPrompt required" },
             { status: 400 },
           );
         }
-        const bytes = Uint8Array.from(atob(imageB64), (c) => c.charCodeAt(0));
-        const result = await uploadStoryPhoto(igSession, bytes.buffer);
+        const result = await uploadStoryPhoto(igSession, buffer);
         return NextResponse.json(result);
       }
 

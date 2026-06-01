@@ -2,6 +2,11 @@ import type { IGSession } from "./types";
 
 const LOGIN_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes to complete login
 
+// Must match the default UA in lib/instagram.ts. IG binds the session to whatever
+// UA the login browser used, and we replay session.userAgent on every API call.
+const LOGIN_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
+
 export async function launchInstagramLogin(): Promise<{
   success: boolean;
   session?: IGSession;
@@ -36,8 +41,7 @@ export async function launchInstagramLogin(): Promise<{
 
   try {
     const context = await browser.newContext({
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      userAgent: LOGIN_USER_AGENT,
       viewport: { width: 420, height: 760 },
       deviceScaleFactor: 2,
     });
@@ -89,6 +93,7 @@ export async function launchInstagramLogin(): Promise<{
               username: "",
               fbDtsg,
               lsd,
+              userAgent: LOGIN_USER_AGENT,
             });
           }
         } catch {

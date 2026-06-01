@@ -2,23 +2,54 @@
 
 import { motion } from "motion/react";
 import type { IGProfile } from "@/lib/types";
-import type { Ritual } from "@/lib/rituals";
+import { ritualKind, type Ritual } from "@/lib/rituals";
+
+const SEND_LABEL: Record<string, string> = {
+  dm: "Send the DM",
+  bio: "Replace my bio",
+  story: "Post to my story",
+  pfp: "Swap my pic",
+};
+
+const SELF_ACCOUNT_NOTE: Record<string, string> = {
+  bio: "⚠ Overwrites your real Instagram bio",
+  story: "⚠ Posts to your real story (24h, all followers)",
+  pfp: "⚠ Replaces your real profile picture",
+};
 
 function proxyPic(url?: string) {
   if (!url) return undefined;
   return `/api/img-proxy?url=${encodeURIComponent(url)}`;
 }
 
-function Avatar({ user, size = "sm" }: { user: IGProfile; size?: "sm" | "md" }) {
+function Avatar({
+  user,
+  size = "sm",
+}: {
+  user: IGProfile;
+  size?: "sm" | "md";
+}) {
   const pic = proxyPic(user.profilePic);
   const s = size === "md" ? "w-10 h-10" : "w-7 h-7";
   const text = size === "md" ? "text-sm" : "text-[10px]";
 
   if (pic) {
-    return <img src={pic} alt="" className={`${s} rounded-full object-cover ring-2 ring-blush/30 shrink-0`} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />;
+    return (
+      <img
+        src={pic}
+        alt=""
+        className={`${s} rounded-full object-cover ring-2 ring-blush/30 shrink-0`}
+        draggable={false}
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = "none";
+        }}
+      />
+    );
   }
   return (
-    <div className={`${s} rounded-full bg-blush/30 flex items-center justify-center ${text} font-bold text-rose shrink-0`}>
+    <div
+      className={`${s} rounded-full bg-blush/30 flex items-center justify-center ${text} font-bold text-rose shrink-0`}
+    >
       {user.username[0]?.toUpperCase()}
     </div>
   );
@@ -38,14 +69,28 @@ interface ResultCardProps {
 }
 
 export default function ResultCard({
-  victim, ritual, target, message, messageLoading, error, solo, onMessageChange, onReroll, onSend,
+  victim,
+  ritual,
+  target,
+  message,
+  messageLoading,
+  error,
+  solo,
+  onMessageChange,
+  onReroll,
+  onSend,
 }: ResultCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 15, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.4, type: "spring", stiffness: 200, damping: 20 }}
+      transition={{
+        duration: 0.4,
+        type: "spring",
+        stiffness: 200,
+        damping: 20,
+      }}
       className="w-full"
     >
       {/* Summary pills */}
@@ -57,28 +102,45 @@ export default function ResultCard({
         ) : (
           <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
             <Avatar user={victim} size="md" />
-            <span className="text-sm font-semibold text-zinc-800">@{victim.username}</span>
+            <span className="text-sm font-semibold text-zinc-800">
+              @{victim.username}
+            </span>
           </div>
         )}
         <span className="text-2xl">{ritual.emoji}</span>
         <div className="flex items-center gap-2 bg-white border border-beige/40 rounded-full px-3 py-1.5">
           <span className="text-sm text-zinc-400">→</span>
           <Avatar user={target} size="md" />
-          <span className="text-sm font-semibold text-zinc-800">@{target.username}</span>
+          <span className="text-sm font-semibold text-zinc-800">
+            @{target.username}
+          </span>
         </div>
       </div>
 
       {messageLoading ? (
         <div className="flex flex-col items-center gap-2 py-6">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="w-6 h-6 border-2 border-blush border-t-rose rounded-full" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            className="w-6 h-6 border-2 border-blush border-t-rose rounded-full"
+          />
           <p className="text-sm text-zinc-400">Crafting the shame&hellip;</p>
         </div>
       ) : message ? (
         <div className="space-y-3">
           <div className="bg-white border border-beige/40 rounded-2xl p-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-rose animate-pulse" />
-              <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-400 font-semibold">{ritual.name}</span>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose animate-pulse" />
+                <span className="text-[10px] uppercase tracking-[0.12em] text-zinc-400 font-semibold">
+                  {ritual.name}
+                </span>
+              </div>
+              {SELF_ACCOUNT_NOTE[ritualKind(ritual)] && (
+                <span className="text-[9px] font-semibold text-rose/70">
+                  {SELF_ACCOUNT_NOTE[ritualKind(ritual)]}
+                </span>
+              )}
             </div>
             <textarea
               value={message}
@@ -88,13 +150,21 @@ export default function ResultCard({
             />
           </div>
           <div className="flex gap-2">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onReroll}
-              className="flex-1 py-3 text-sm font-semibold text-zinc-500 bg-white border border-beige/40 rounded-xl hover:border-rose/30 transition-colors">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onReroll}
+              className="flex-1 py-3 text-sm font-semibold text-zinc-500 bg-white border border-beige/40 rounded-xl hover:border-rose/30 transition-colors"
+            >
               Reroll
             </motion.button>
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onSend}
-              className="flex-1 py-3 text-sm font-bold bg-gradient-to-r from-pink to-rose text-white rounded-xl shadow-lg shadow-rose/15">
-              Send the Shame
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onSend}
+              className="flex-1 py-3 text-sm font-bold bg-gradient-to-r from-pink to-rose text-white rounded-xl shadow-lg shadow-rose/15"
+            >
+              {SEND_LABEL[ritualKind(ritual)] || "Send the Shame"}
             </motion.button>
           </div>
         </div>

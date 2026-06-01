@@ -2,8 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { IGProfile } from "@/lib/types";
-import { RITUALS, type Ritual } from "@/lib/rituals";
+import { RITUALS, ritualKind, type Ritual } from "@/lib/rituals";
 import { useTargetPool } from "./useTargetPool";
+
+/** Fill an image-gen template: {message} → generated text, {target} → @username. */
+function buildImagePrompt(r: Ritual, message: string, targetUsername: string) {
+  return (r.imagePrompt || "")
+    .replace(/\{message\}/g, message)
+    .replace(/\{target\}/g, `@${targetUsername}`);
+}
 
 function loadStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -20,7 +27,13 @@ function saveStorage(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-export type Phase = "idle" | "spinning" | "locked" | "result" | "sending" | "sent";
+export type Phase =
+  | "idle"
+  | "spinning"
+  | "locked"
+  | "result"
+  | "sending"
+  | "sent";
 
 export interface RouletteState {
   profiles: IGProfile[];
@@ -87,13 +100,16 @@ export function useRouletteState(): RouletteState {
     }
   }, [phase, victimLocked, ritualLocked, targetLocked]);
 
-  async function generateMsg(r: Ritual, u: IGProfile) {
+  async function generateMsg(r: Ritual, subjectUsername: string) {
     setMessageLoading(true);
     try {
       const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ritualPrompt: r.prompt, username: u.username }),
+        body: JSON.stringify({
+          ritualPrompt: r.prompt,
+          username: subjectUsername,
+        }),
       });
       const data = await resp.json();
       if (data.ok) setMessage(data.message);
@@ -135,27 +151,60 @@ export function useRouletteState(): RouletteState {
     setVictimLocked(true);
   }, []);
 
+  // DM rituals are written about the victim; self-account deeds (bio/story/pfp)
+  // are public confessions about the target, so generate against the target.
+  function subjectFor(r: Ritual): string {
+    if (ritualKind(r) !== "dm" && target) return target.username;
+    return (victim || target)?.username || "";
+  }
+
   const onRitualLocked = useCallback(() => {
     setRitualLocked(true);
     // Fire message generation as soon as we know ritual + victim
     if (!messageGenerated.current && ritual && victim) {
       messageGenerated.current = true;
-      generateMsg(ritual, victim);
+      generateMsg(ritual, subjectFor(ritual));
     }
-  }, [ritual, victim]);
+  }, [ritual, victim, target]);
 
   const onTargetLocked = useCallback(() => {
     setTargetLocked(true);
   }, []);
 
   const rerollMessage = useCallback(() => {
-    if (ritual && victim) generateMsg(ritual, victim);
-  }, [ritual, victim]);
+    if (ritual && victim) generateMsg(ritual, subjectFor(ritual));
+  }, [ritual, victim, target]);
 
   const sendMessage = useCallback(async () => {
-    if (!target || !message.trim()) return;
+    if (!target || !ritual) return;
+    const kind = ritualKind(ritual);
+    // The pic swap is image-only; every other deed needs the generated text.
+    if (kind !== "pfp" && !message.trim()) return;
+
     setPhase("sending");
     setStatusText("Delivering the shame...");
+
+    const jsonHeaders = { "Content-Type": "application/json" };
+    const recordHistory = () => {
+      const history = loadStorage<
+        {
+          profile: { id: string; username: string };
+          target: { id: string; username: string };
+          ritual: string;
+          message: string;
+          timestamp: number;
+        }[]
+      >("st_shot_history", []);
+      history.unshift({
+        profile: { id: victim?.id || "", username: victim?.username || "" },
+        target: { id: target.id, username: target.username },
+        ritual: ritual.name,
+        message,
+        timestamp: Date.now(),
+      });
+      if (history.length > 500) history.length = 500;
+      saveStorage("st_shot_history", history);
+    };
 
     try {
       const seen = loadStorage<string[]>("st_seen", []);
@@ -163,46 +212,86 @@ export function useRouletteState(): RouletteState {
       if (target.id !== victim?.id) seen.push(target.id);
       saveStorage("st_seen", seen);
 
-      const relResp = await fetch("/api/relationship", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: target.id }),
-      });
-      const rel = await relResp.json();
-
-      if (rel.followedBy) {
-        const dmResp = await fetch("/api/dm", {
+      if (kind === "bio") {
+        const resp = await fetch("/api/profile-edit", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: target.id, text: message }),
+          headers: jsonHeaders,
+          body: JSON.stringify({ biography: message }),
         });
-        const dm = await dmResp.json();
-        if (dm.success) {
-          setStatusText(`Shame delivered to @${target.username}`);
-          const history = loadStorage<{ profile: { id: string; username: string }; target: { id: string; username: string }; ritual: string; message: string; timestamp: number }[]>("st_shot_history", []);
-          history.unshift({
-            profile: { id: victim?.id || "", username: victim?.username || "" },
-            target: { id: target.id, username: target.username },
-            ritual: ritual?.name || "",
-            message,
-            timestamp: Date.now(),
-          });
-          if (history.length > 500) history.length = 500;
-          saveStorage("st_shot_history", history);
+        const data = await resp.json();
+        if (data.success) {
+          setStatusText("✅ Your bio is now a public confession — go look 💀");
+          recordHistory();
         } else {
-          setStatusText("DM failed — they might have restricted messages");
+          setStatusText("Couldn't change your bio — try again");
+        }
+      } else if (kind === "story") {
+        const resp = await fetch("/api/story", {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({
+            action: "photo",
+            genPrompt: buildImagePrompt(ritual, message, target.username),
+          }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          setStatusText("✅ Posted to your story for all your followers 💀");
+          recordHistory();
+        } else {
+          setStatusText(data.error || "Couldn't post the story — try again");
+        }
+      } else if (kind === "pfp") {
+        const resp = await fetch("/api/pfp", {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({
+            genPrompt: buildImagePrompt(ritual, message, target.username),
+          }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          setStatusText(
+            "✅ Profile picture swapped — good luck explaining that 💀",
+          );
+          recordHistory();
+        } else {
+          setStatusText(data.error || "Couldn't swap your pic — try again");
         }
       } else {
-        const followResp = await fetch("/api/follow", {
+        // Default DM flow: DM if they follow you, otherwise follow + queue.
+        const relResp = await fetch("/api/relationship", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: target.id, action: "follow" }),
+          headers: jsonHeaders,
+          body: JSON.stringify({ userId: target.id }),
         });
-        const follow = await followResp.json();
-        if (follow.success) {
-          setStatusText(`Following @${target.username} — shame queued`);
+        const rel = await relResp.json();
+
+        if (rel.followedBy) {
+          const dmResp = await fetch("/api/dm", {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({ userId: target.id, text: message }),
+          });
+          const dm = await dmResp.json();
+          if (dm.success) {
+            setStatusText(`✅ Shame delivered to @${target.username}`);
+            recordHistory();
+          } else {
+            setStatusText("DM failed — they might have restricted messages");
+          }
         } else {
-          setStatusText("Could not follow — try again");
+          const followResp = await fetch("/api/follow", {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({ userId: target.id, action: "follow" }),
+          });
+          const follow = await followResp.json();
+          if (follow.success) {
+            setStatusText(`Following @${target.username} — shame queued`);
+          } else {
+            setStatusText("Could not follow — try again");
+          }
         }
       }
       setPhase("sent");
@@ -229,12 +318,29 @@ export function useRouletteState(): RouletteState {
   }, [victim, target, pool]);
 
   return {
-    profiles, loading, phase,
-    victim, ritual, target,
-    victimLocked, ritualLocked, targetLocked,
-    message, messageLoading, error, statusText,
-    selectedVictimIndex, selectedRitualIndex, selectedTargetIndex,
-    setMessage, spin, sendMessage, reset,
-    onVictimLocked, onRitualLocked, onTargetLocked, rerollMessage,
+    profiles,
+    loading,
+    phase,
+    victim,
+    ritual,
+    target,
+    victimLocked,
+    ritualLocked,
+    targetLocked,
+    message,
+    messageLoading,
+    error,
+    statusText,
+    selectedVictimIndex,
+    selectedRitualIndex,
+    selectedTargetIndex,
+    setMessage,
+    spin,
+    sendMessage,
+    reset,
+    onVictimLocked,
+    onRitualLocked,
+    onTargetLocked,
+    rerollMessage,
   };
 }

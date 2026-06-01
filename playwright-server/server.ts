@@ -6,6 +6,11 @@ app.use(express.json());
 
 const API_SECRET = process.env.API_SECRET;
 
+// Must match the default UA in webapp/lib/instagram.ts. IG binds the session to
+// the login UA, and the webapp replays session.userAgent on every API call.
+const LOGIN_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
+
 // Auth middleware
 app.use((req, res, next) => {
   if (req.path === "/health") return next();
@@ -29,8 +34,7 @@ app.post("/login", async (req, res) => {
     });
 
     const context = await browser.newContext({
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      userAgent: LOGIN_USER_AGENT,
       viewport: { width: 420, height: 760 },
       deviceScaleFactor: 2,
     });
@@ -101,6 +105,7 @@ app.post("/login", async (req, res) => {
         username,
         fbDtsg,
         lsd,
+        userAgent: LOGIN_USER_AGENT,
       },
     });
   } catch (e) {

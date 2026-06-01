@@ -47,6 +47,36 @@ export async function generateImage(
   };
 }
 
+/**
+ * Generate an image and return it as raw bytes, regardless of whether FLUX
+ * replies with base64 or a URL. Used by the story/pfp deed routes so the heavy
+ * image data never has to round-trip through the browser.
+ */
+export async function generateImageBuffer(
+  prompt: string,
+  size = "1024x1024",
+): Promise<{ success: boolean; buffer?: ArrayBuffer; error?: string }> {
+  const img = await generateImage(prompt, size);
+  if (!img.success) return { success: false, error: img.error };
+
+  if (img.imageB64) {
+    const bytes = Uint8Array.from(atob(img.imageB64), (c) => c.charCodeAt(0));
+    return { success: true, buffer: bytes.buffer };
+  }
+  if (img.imageUrl) {
+    try {
+      const resp = await fetch(img.imageUrl);
+      if (!resp.ok) {
+        return { success: false, error: `Image fetch ${resp.status}` };
+      }
+      return { success: true, buffer: await resp.arrayBuffer() };
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
+    }
+  }
+  return { success: false, error: "No image data returned" };
+}
+
 // ── Video Generation (Azure Sora-2) ──
 
 export async function submitVideoJob(
