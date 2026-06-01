@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { IGProfile } from "@/lib/types";
 import { RITUALS, ritualKind, type Ritual } from "@/lib/rituals";
+import { localRitualMessage } from "@/lib/local-message";
 import { useTargetPool } from "./useTargetPool";
 
 /** Fill an image-gen template: {message} → generated text, {target} → @username. */
@@ -82,7 +83,9 @@ export function useRouletteState(): RouletteState {
   const [selectedTargetIndex, setSelectedTargetIndex] = useState(0);
 
   const [message, setMessage] = useState("");
-  const [messageLoading, setMessageLoading] = useState(false);
+  // Generation is now instant (local templates), so this is always false — kept
+  // only to satisfy the ResultCard prop.
+  const [messageLoading] = useState(false);
   const [error, setError] = useState(pool.error);
   const [statusText, setStatusText] = useState("");
 
@@ -100,25 +103,11 @@ export function useRouletteState(): RouletteState {
     }
   }, [phase, victimLocked, ritualLocked, targetLocked]);
 
-  async function generateMsg(r: Ritual, subjectUsername: string) {
-    setMessageLoading(true);
-    try {
-      const resp = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ritualPrompt: r.prompt,
-          username: subjectUsername,
-        }),
-      });
-      const data = await resp.json();
-      if (data.ok) setMessage(data.message);
-      else setError("Failed to generate message");
-    } catch {
-      setError("Network error");
-    } finally {
-      setMessageLoading(false);
-    }
+  // No AI: messages come from hardcoded local templates so the wheel works
+  // instantly and offline. (See lib/local-message.ts.)
+  function generateMsg(r: Ritual, subjectUsername: string) {
+    setError("");
+    setMessage(localRitualMessage(r, subjectUsername));
   }
 
   const spin = useCallback(() => {
@@ -151,19 +140,13 @@ export function useRouletteState(): RouletteState {
     setVictimLocked(true);
   }, []);
 
-  // DM rituals are written about the victim; self-account deeds (bio/story/pfp)
-  // are public confessions about the target, so generate against the target.
-  function subjectFor(r: Ritual): string {
-    if (ritualKind(r) !== "dm" && target) return target.username;
-    return (victim || target)?.username || "";
-  }
-
   const onRitualLocked = useCallback(() => {
     setRitualLocked(true);
-    // Fire message generation as soon as we know ritual + victim
+    // Fire message generation as soon as we know ritual + victim. Every ritual
+    // is directed at the target.
     if (!messageGenerated.current && ritual && victim) {
       messageGenerated.current = true;
-      generateMsg(ritual, subjectFor(ritual));
+      generateMsg(ritual, (target || victim).username);
     }
   }, [ritual, victim, target]);
 
@@ -172,7 +155,7 @@ export function useRouletteState(): RouletteState {
   }, []);
 
   const rerollMessage = useCallback(() => {
-    if (ritual && victim) generateMsg(ritual, subjectFor(ritual));
+    if (ritual && victim) generateMsg(ritual, (target || victim).username);
   }, [ritual, victim, target]);
 
   const sendMessage = useCallback(async () => {
