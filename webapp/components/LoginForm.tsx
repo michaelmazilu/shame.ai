@@ -39,7 +39,11 @@ export default function LoginForm() {
       const data = await resp.json();
 
       if (!resp.ok) {
-        if (data.error?.includes("only available when running locally")) {
+        if (
+          data.credentialsRequired ||
+          data.error?.includes("username and password required") ||
+          data.error?.includes("only available when running locally")
+        ) {
           setStep("credentials");
           setLoading(false);
           return;
@@ -62,7 +66,7 @@ export default function LoginForm() {
     setError("");
 
     try {
-      // Try Playwright server first (Railway), fall back to REST login
+      // Hosted deployments send credentials to the remote Playwright server.
       const resp = await fetch("/api/auth/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -186,7 +190,7 @@ export default function LoginForm() {
     );
   }
 
-  // REST username/password login (fallback for Vercel)
+  // Username/password form for hosted remote Playwright login.
   if (step === "credentials") {
     return (
       <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
@@ -241,9 +245,7 @@ export default function LoginForm() {
       {loading && (
         <div className="text-center space-y-2">
           <div className="w-6 h-6 border-2 border-beige border-t-rose rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-zinc-500">
-            A browser window should open on your computer.
-          </p>
+          <p className="text-sm text-zinc-500">Starting Instagram login...</p>
           <p className="text-sm text-zinc-400">
             Log in to Instagram there, then come back here.
           </p>
