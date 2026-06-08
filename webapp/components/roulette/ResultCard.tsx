@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import Image from "next/image";
 import type { IGProfile } from "@/lib/types";
 import { ritualKind, type Ritual } from "@/lib/rituals";
 
@@ -35,15 +36,19 @@ function Avatar({
 
   if (pic) {
     return (
-      <img
-        src={pic}
-        alt=""
-        className={`${s} rounded-full object-cover ring-2 ring-blush/30 shrink-0`}
-        draggable={false}
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
-      />
+      <span
+        className={`${s} relative block rounded-full overflow-hidden ring-2 ring-blush/30 shrink-0`}
+      >
+        <Image
+          src={pic}
+          alt=""
+          fill
+          sizes={size === "md" ? "40px" : "28px"}
+          className="object-cover"
+          draggable={false}
+          unoptimized
+        />
+      </span>
     );
   }
   return (

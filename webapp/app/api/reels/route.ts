@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getIGSession } from "@/lib/session";
-import { getRandomReel, getReelsFeed, getExploreReels } from "@/lib/instagram";
+import { getRandomReel } from "@/lib/instagram";
 
 export async function POST() {
   const igSession = await getIGSession();

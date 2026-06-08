@@ -26,8 +26,6 @@ export function RatingInteraction({ onChange, className }: RatingInteractionProp
   }
 
   const displayRating = hoverRating || rating
-  const activeData = displayRating > 0 ? ratingData[displayRating - 1] : null
-
   return (
     <div className={cn("flex flex-col items-center gap-6", className)}>
       {/* Emoji rating buttons */}

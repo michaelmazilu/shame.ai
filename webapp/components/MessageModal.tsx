@@ -11,6 +11,15 @@ interface MessageModalProps {
   onClose: () => void;
 }
 
+async function fetchGeneratedMessage(tone: string) {
+  const resp = await fetch("/api/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tone }),
+  });
+  return resp.json();
+}
+
 export default function MessageModal({ profile, settings, onSend, onFallback, onClose }: MessageModalProps) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
@@ -20,12 +29,7 @@ export default function MessageModal({ profile, settings, onSend, onFallback, on
   const requestGenerate = useCallback(async () => {
     setState("loading");
     try {
-      const resp = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tone: settings.aiTone || "casual" }),
-      });
-      const data = await resp.json();
+      const data = await fetchGeneratedMessage(settings.aiTone || "casual");
       if (data.ok) {
         setMessage(data.message);
         setState("ready");
@@ -40,8 +44,31 @@ export default function MessageModal({ profile, settings, onSend, onFallback, on
   }, [settings.aiTone]);
 
   useEffect(() => {
-    requestGenerate();
-  }, [requestGenerate]);
+    let active = true;
+
+    async function loadInitialMessage() {
+      try {
+        const data = await fetchGeneratedMessage(settings.aiTone || "casual");
+        if (!active) return;
+        if (data.ok) {
+          setMessage(data.message);
+          setState("ready");
+        } else {
+          setErrorText("Could not generate message. Try again.");
+          setState("error");
+        }
+      } catch {
+        if (!active) return;
+        setErrorText("Network error. Check your connection.");
+        setState("error");
+      }
+    }
+
+    loadInitialMessage();
+    return () => {
+      active = false;
+    };
+  }, [settings.aiTone]);
 
   function handleSend() {
     const text = message.trim();

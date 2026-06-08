@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getIGSession } from "@/lib/session";
 import { getRandomReel, commentOnPost } from "@/lib/instagram";
 import { generateReelComment } from "@/lib/ai-gen";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   const igSession = await getIGSession();
   if (!igSession) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });

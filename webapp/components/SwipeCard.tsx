@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import type { IGProfile } from "@/lib/types";
 
 const SWIPE_THRESHOLD = 100;
@@ -114,11 +115,14 @@ export default function SwipeCard({ profile, onSwipeRight, onSwipeLeft }: SwipeC
       {/* Hero image */}
       <div className="relative w-full aspect-[3/4] overflow-hidden">
         {profile.profilePic ? (
-          <img
+          <Image
             src={profile.profilePic}
             alt={profile.username}
-            className="w-full h-full object-cover"
+            fill
+            sizes="(max-width: 640px) 100vw, 420px"
+            className="object-cover"
             draggable={false}
+            unoptimized
           />
         ) : (
           <div className="w-full h-full bg-neutral-800 flex items-center justify-center text-neutral-500 text-4xl font-bold">
@@ -174,13 +178,20 @@ export default function SwipeCard({ profile, onSwipeRight, onSwipeLeft }: SwipeC
         {postImages.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {postImages.map((p, i) => (
-              <img
+              <span
                 key={i}
-                src={p.imageUrl!}
-                alt="post"
-                className="w-14 h-14 rounded-md object-cover"
-                draggable={false}
-              />
+                className="relative block w-14 h-14 rounded-md overflow-hidden"
+              >
+                <Image
+                  src={p.imageUrl!}
+                  alt="post"
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                  draggable={false}
+                  unoptimized
+                />
+              </span>
             ))}
           </div>
         )}

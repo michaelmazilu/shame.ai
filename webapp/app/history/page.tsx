@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 
 interface ShameEntry {
@@ -9,6 +9,10 @@ interface ShameEntry {
   message: string;
   timestamp: number;
 }
+
+const EMPTY_HISTORY: ShameEntry[] = [];
+let historyRawCache: string | null | undefined;
+let historySnapshotCache = EMPTY_HISTORY;
 
 function timeSince(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -21,15 +25,33 @@ function timeSince(timestamp: number): string {
   return `${days}d`;
 }
 
-export default function HistoryPage() {
-  const [history, setHistory] = useState<ShameEntry[]>([]);
+function readHistorySnapshot(): ShameEntry[] {
+  if (typeof window === "undefined") return EMPTY_HISTORY;
+  try {
+    const h = localStorage.getItem("st_shot_history");
+    if (h === historyRawCache) return historySnapshotCache;
+    historyRawCache = h;
+    historySnapshotCache = h ? JSON.parse(h) : EMPTY_HISTORY;
+    return historySnapshotCache;
+  } catch {
+    historyRawCache = undefined;
+    historySnapshotCache = EMPTY_HISTORY;
+    return historySnapshotCache;
+  }
+}
 
-  useEffect(() => {
-    try {
-      const h = localStorage.getItem("st_shot_history");
-      if (h) setHistory(JSON.parse(h));
-    } catch { /* empty */ }
-  }, []);
+function subscribeHistory(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
+export default function HistoryPage() {
+  const history = useSyncExternalStore(
+    subscribeHistory,
+    readHistorySnapshot,
+    () => EMPTY_HISTORY,
+  );
 
   return (
     <main className="min-h-dvh bg-cream-light text-zinc-900">

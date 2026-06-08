@@ -91,10 +91,6 @@ export function useRouletteState(): RouletteState {
 
   const messageGenerated = useRef(false);
 
-  useEffect(() => {
-    if (pool.error) setError(pool.error);
-  }, [pool.error]);
-
   // Check if all wheels locked → transition to result
   useEffect(() => {
     if (phase === "spinning" && victimLocked && ritualLocked && targetLocked) {
@@ -312,7 +308,7 @@ export function useRouletteState(): RouletteState {
     targetLocked,
     message,
     messageLoading,
-    error,
+    error: error || pool.error,
     statusText,
     selectedVictimIndex,
     selectedRitualIndex,

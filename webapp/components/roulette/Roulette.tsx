@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { RITUALS } from "@/lib/rituals";
 import { useRouletteState } from "./useRouletteState";
@@ -85,16 +86,11 @@ function VerticalReel({
     };
   }, [spinning, locked, totalTicks, items.length, selectedIndex, onLocked]);
 
-  useEffect(() => {
-    if (!spinning && !locked) {
-      setDisplayIndex(-1);
-      lockedRef.current = false;
-    }
-  }, [spinning, locked]);
-
   const item =
-    displayIndex >= 0 && displayIndex < items.length
-      ? items[displayIndex]
+    spinning || locked
+      ? displayIndex >= 0 && displayIndex < items.length
+        ? items[displayIndex]
+        : null
       : null;
   const proxiedPic = item?.pic ? proxyPic(item.pic) : undefined;
 
@@ -187,20 +183,24 @@ function VerticalReel({
                 className="flex flex-col items-center text-center w-full"
               >
                 {proxiedPic ? (
-                  <img
-                    src={proxiedPic}
-                    alt=""
+                  <span
                     className={cn(
-                      "w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover ring-4 mb-3 transition-all",
+                      "relative block w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden ring-4 mb-3 transition-all",
                       locked
                         ? "ring-rose shadow-2xl shadow-rose/30"
                         : "ring-blush/30",
                     )}
-                    draggable={false}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
+                  >
+                    <Image
+                      src={proxiedPic}
+                      alt=""
+                      fill
+                      sizes="112px"
+                      className="object-cover"
+                      draggable={false}
+                      unoptimized
+                    />
+                  </span>
                 ) : item.emoji ? (
                   <motion.span
                     animate={locked ? { scale: [1, 1.2, 1] } : {}}
@@ -405,7 +405,13 @@ function SlotLever({
 
 /* ── Players Sidebar ── */
 
-function PlayersSidebar({ players }: { players: RoomPlayer[] }) {
+function PlayersSidebar({
+  players,
+  checkedAt,
+}: {
+  players: RoomPlayer[];
+  checkedAt: number;
+}) {
   return (
     <div className="w-48 shrink-0 bg-white/50 backdrop-blur-sm border-r border-beige/20 px-3 py-3 overflow-y-auto hidden lg:flex flex-col">
       <p className="text-[9px] uppercase tracking-[0.15em] text-zinc-400 font-bold mb-3 px-1">
@@ -414,7 +420,7 @@ function PlayersSidebar({ players }: { players: RoomPlayer[] }) {
       <div className="space-y-1 flex-1">
         {players.map((p) => {
           const isOnline =
-            Date.now() - new Date(p.last_seen_at).getTime() < 90_000;
+            checkedAt - new Date(p.last_seen_at).getTime() < 90_000;
           return (
             <motion.div
               key={p.id}
@@ -454,33 +460,6 @@ function PlayersSidebar({ players }: { players: RoomPlayer[] }) {
   );
 }
 
-/* ── Stats Bar ── */
-
-function StatsBar({
-  victimCount,
-  ritualCount,
-}: {
-  victimCount: number;
-  ritualCount: number;
-}) {
-  return (
-    <div className="flex items-center justify-center gap-4 mb-2">
-      <div className="flex items-center gap-2 bg-white/60 border border-beige/20 rounded-full px-4 py-1.5">
-        <div className="w-2 h-2 rounded-full bg-rose animate-pulse" />
-        <span className="text-xs font-medium text-zinc-600">
-          {victimCount} victims
-        </span>
-      </div>
-      <div className="flex items-center gap-2 bg-white/60 border border-beige/20 rounded-full px-4 py-1.5">
-        <span className="text-sm">💀</span>
-        <span className="text-xs font-medium text-zinc-600">
-          {ritualCount} rituals
-        </span>
-      </div>
-    </div>
-  );
-}
-
 /* ── Main ── */
 
 interface RouletteProps {
@@ -499,13 +478,10 @@ export default function Roulette({
 }: RouletteProps) {
   const state = useRouletteState();
   const isSolo = mode === "solo";
-  const [mpSession, setMpSession] = useState<MpSession | null>(null);
+  const [mpSession] = useState<MpSession | null>(() => loadSession());
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
+  const [playersCheckedAt, setPlayersCheckedAt] = useState(0);
 
-  useEffect(() => {
-    const s = loadSession();
-    if (s) setMpSession(s);
-  }, []);
   useEffect(() => {
     if (!mpSession) return;
     const token = myPlayerToken(mpSession);
@@ -516,7 +492,10 @@ export default function Roulette({
           room_id: mpSession!.room_id,
           player_token: myPlayerToken(mpSession!)!,
         });
-        if (data.players) setPlayers(data.players);
+        if (data.players) {
+          setPlayers(data.players);
+          setPlayersCheckedAt(Date.now());
+        }
       } catch {}
     }
     poll();
@@ -569,13 +548,14 @@ export default function Roulette({
 
   const isSpinning = state.phase === "spinning";
   const canSpin = state.phase === "idle" && state.profiles.length > 0;
+  const { victimLocked, onVictimLocked } = state;
 
   // Solo mode: auto-lock victim immediately since you ARE the victim
   useEffect(() => {
-    if (isSolo && isSpinning && !state.victimLocked) {
-      state.onVictimLocked();
+    if (isSolo && isSpinning && !victimLocked) {
+      onVictimLocked();
     }
-  }, [isSolo, isSpinning, state.victimLocked, state.onVictimLocked]);
+  }, [isSolo, isSpinning, victimLocked, onVictimLocked]);
 
   if (state.loading) {
     return (
@@ -612,7 +592,9 @@ export default function Roulette({
 
   return (
     <div className="flex-1 flex overflow-hidden">
-      {mpSession && players.length > 0 && <PlayersSidebar players={players} />}
+      {mpSession && players.length > 0 && (
+        <PlayersSidebar players={players} checkedAt={playersCheckedAt} />
+      )}
 
       <div className="flex-1 flex flex-col items-center px-6 sm:px-10 py-2 overflow-y-auto">
         {/* Title */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 interface ShameSettings {
@@ -13,21 +13,47 @@ const DEFAULT_SETTINGS: ShameSettings = {
   sources: { suggested: true, explore: true, friendsOfFriends: true },
 };
 
+const SETTINGS_EVENT = "shame-settings-change";
+let settingsRawCache: string | null | undefined;
+let settingsSnapshotCache = DEFAULT_SETTINGS;
+
+function readSettingsSnapshot(): ShameSettings {
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
+  try {
+    const raw = localStorage.getItem("st_settings");
+    if (raw === settingsRawCache) return settingsSnapshotCache;
+    settingsRawCache = raw;
+    settingsSnapshotCache = raw ? JSON.parse(raw) : DEFAULT_SETTINGS;
+    return settingsSnapshotCache;
+  } catch {
+    settingsRawCache = undefined;
+    settingsSnapshotCache = DEFAULT_SETTINGS;
+    return settingsSnapshotCache;
+  }
+}
+
+function subscribeSettings(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(SETTINGS_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(SETTINGS_EVENT, onStoreChange);
+  };
+}
+
 export default function SettingsForm() {
   const router = useRouter();
-  const [settings, setSettings] = useState<ShameSettings>(DEFAULT_SETTINGS);
+  const settings = useSyncExternalStore(
+    subscribeSettings,
+    readSettingsSnapshot,
+    () => DEFAULT_SETTINGS,
+  );
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("st_settings");
-      if (raw) setSettings(JSON.parse(raw));
-    } catch { /* empty */ }
-  }, []);
-
   function save(next: ShameSettings) {
-    setSettings(next);
     localStorage.setItem("st_settings", JSON.stringify(next));
+    window.dispatchEvent(new Event(SETTINGS_EVENT));
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
   }

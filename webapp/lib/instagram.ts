@@ -7,6 +7,19 @@ const BASE = "https://www.instagram.com";
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
 
+type SuggestedUser = {
+  pk?: string | number;
+  pk_id?: string | number;
+  username?: string;
+  full_name?: string;
+  profile_pic_url?: string;
+  is_private?: boolean;
+};
+
+type SuggestedGroup = {
+  items?: Array<{ user?: SuggestedUser; social_context?: unknown }>;
+};
+
 function buildHeaders(session: IGSession): Record<string, string> {
   return {
     accept: "*/*",
@@ -206,9 +219,9 @@ export async function getSuggestedUsers(
   const url = `${BASE}/api/v1/discover/ayml/`;
   const resp = await igFetch(url, session);
   const text = await resp.text();
-  let data: any;
+  let data: { groups?: SuggestedGroup[] };
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(text) as { groups?: SuggestedGroup[] };
   } catch {
     console.warn(
       "[getSuggestedUsers] Invalid JSON response, length:",
@@ -217,17 +230,16 @@ export async function getSuggestedUsers(
     return [];
   }
 
-  const groups = (data?.groups || []) as Array<{
-    items?: Array<{ user?: Record<string, any>; social_context?: unknown }>;
-  }>;
+  const groups = data.groups || [];
   const users: IGProfile[] = [];
 
   for (const group of groups) {
     for (const item of group.items || []) {
       const u = item.user;
-      if (u) {
+      const id = u?.pk ?? u?.pk_id;
+      if (u?.username && id != null) {
         users.push({
-          id: String(u.pk || u.pk_id),
+          id: String(id),
           username: u.username,
           fullName: u.full_name,
           profilePic: u.profile_pic_url,
@@ -486,7 +498,7 @@ export async function hydrateInstagramUsername(
       user?: { username?: string };
       username?: string;
     };
-    let u = data?.user?.username ?? data?.username;
+    const u = data?.user?.username ?? data?.username;
     if (typeof u === "string" && u.trim()) {
       session.username = u.trim();
     }
@@ -1173,15 +1185,6 @@ export async function repostReelToStory(
 }
 
 // ── Profile Pipeline ──
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 export function filterAndDedupe(
   profiles: IGProfile[],
